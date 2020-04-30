@@ -1,0 +1,80 @@
+2014/11/23 11:09:32 [emerg] 2248#4000: CreateFile() "c:\work\tools\conf\nginx.wtserver.conf" failed (2: The system cannot find the file specified) in c:\work\tools\conf\nginx.conf:95
+2014/11/23 11:14:11 [emerg] 2612#1188: CreateFile() "c:\work\tools\conf\nginx.wtserver.conf" failed (2: The system cannot find the file specified) in c:\work\tools\conf\nginx.conf:95
+2014/11/23 11:14:51 [emerg] 3284#3288: CreateFile() "c:\work\tools\conf\nginx.wtserver.conf" failed (2: The system cannot find the file specified) in c:\work\tools\conf\nginx.conf:95
+2014/11/23 11:18:23 [emerg] 1964#2380: unknown directive "defau" in c:\WORK\WT-NMP\conf\nginx.conf:56
+2014/11/23 11:20:40 [emerg] 3288#3284: unknown directive "defau" in c:\WORK\WT-NMP\conf\nginx.conf:56
+2014/11/23 11:30:30 [emerg] 1040#2696: unknown directive "defau" in c:\work\wt-nmp\conf\nginx.conf:56
+2014/11/23 11:31:07 [emerg] 2320#1304: unknown directive "defau" in c:\WORK\WT-NMP\conf\nginx.conf:56
+2014/11/23 12:09:33 [emerg] 368#3028: unknown directive "defau" in c:\work\wt-nmp\conf\nginx.conf:56
+2014/11/23 12:10:12 [emerg] 3820#3212: unknown directive "defau" in c:\work\wt-nmp\conf\nginx.conf:56
+2014/11/23 12:17:56 [emerg] 2396#3344: unknown directive "defau" in c:\work\wt-nmp\conf\nginx.conf:56
+2014/11/23 12:20:50 [emerg] 3760#2784: unknown directive "defau" in c:\work\wt-nmp\conf\nginx.conf:56
+2014/11/23 12:32:00 [emerg] 2820#1916: unknown directive "defau" in c:\work\wt-nmp\conf\nginx.conf:56
+2014/11/23 12:37:14 [emerg] 3192#2988: unknown directive "defau" in c:\work\wt-nmp\conf\nginx.conf:56
+2014/11/23 12:43:14 [emerg] 4032#3896: unknown directive "defau" in c:\work\wt-nmp\conf\nginx.conf:56
+2014/11/23 12:44:58 [emerg] 3804#1916: unknown directive "defau" in c:\work\wt-nmp\conf\nginx.conf:56
+2014/11/23 12:45:55 [emerg] 688#1932: unknown directive "defau" in c:\work\wt-nmp\conf\nginx.conf:56
+2014/11/23 12:46:20 [emerg] 3804#2052: unknown directive "defau" in c:\work\wt-nmp\conf\nginx.conf:56
+2014/11/23 12:47:33 [emerg] 388#2716: unknown directive "defau" in c:\work\wt-nmp\conf\nginx.conf:56
+2014/11/23 13:02:15 [emerg] 3632#1708: unknown directive "defau" in c:\work\wt-nmp\conf\nginx.conf:56
+2014/11/23 13:02:21 [emerg] 2600#3984: unknown directive "defau" in c:\work\wt-nmp\conf\nginx.conf:56
+2014/11/23 13:02:41 [emerg] 3220#3752: unknown directive "defau" in c:\work\wt-nmp\conf\nginx.conf:56
+2014/11/23 13:03:45 [emerg] 3628#3576: unknown directive "defau" in c:\work\wt-nmp\conf\nginx.conf:56
+2014/11/23 13:03:54 [emerg] 796#2236: unknown directive "defau" in c:\work\wt-nmp\conf\nginx.conf:56
+2014/11/23 13:04:26 [emerg] 3664#996: unknown directive "defau" in c:\work\wt-nmp\conf\nginx.conf:56
+2014/11/23 13:04:44 [emerg] 2364#3492: unknown directive "defau" in c:\work\wt-nmp\conf\nginx.conf:56
+2014/11/23 13:04:49 [emerg] 1284#2460: unknown directive "defau" in c:\work\wt-nmp\conf\nginx.conf:56
+2014/11/24 23:51:23 [notice] 3112#1320: signal process started
+2014/11/24 23:51:49 [notice] 3952#1020: signal process started
+2014/11/25 13:10:11 [notice] 3220#3200: signal process started
+2014/11/25 13:10:46 [notice] 3776#3516: signal process started
+2014/11/25 13:18:58 [notice] 3932#3996: signal process started
+2014/11/25 13:20:02 [notice] 788#3464: signal process started
+2014/11/25 13:24:48 [notice] 3688#3592: signal process started
+2014/11/25 15:57:48 [notice] 2572#176: signal process started
+2014/11/25 15:58:38 [notice] 2332#2532: signal process started
+2014/11/25 16:01:38 [notice] 1788#4012: signal process started
+2014/11/25 16:02:21 [notice] 3940#3324: signal process started
+2014/11/25 16:21:58 [notice] 2744#2488: signal process started
+2014/11/25 16:27:23 [notice] 2032#3600: signal process started
+2014/11/25 16:28:03 [notice] 2020#3508: signal process started
+2014/11/25 16:28:47 [notice] 2736#3076: signal process started
+2014/11/25 16:29:08 [notice] 2916#844: signal process started
+2014/11/25 16:29:17 [notice] 3996#3636: signal process started
+2014/11/25 16:32:29 [notice] 3208#3348: signal process started
+2014/11/25 16:32:41 [notice] 2488#1244: signal process started
+2014/11/25 16:34:18 [notice] 3656#2808: signal process started
+2014/11/25 16:55:01 [emerg] 1196#3840: unknown directive "serve" in c:\work\wt-nmp\conf\domains.d/aaaaa.conf:1
+2014/11/25 17:11:36 [emerg] 1964#2464: unknown directive "serve" in c:\work\wt-nmp\conf\domains.d/aaaaa.conf:1
+2014/11/25 17:12:41 [emerg] 1328#3464: unknown directive "serve" in c:\work\wt-nmp\conf\domains.d/aaaaa.conf:1
+2014/11/25 17:13:14 [emerg] 3092#3160: unknown directive "serve" in c:\work\wt-nmp\conf\domains.d/aaaaa.conf:1
+2014/11/25 17:13:20 [emerg] 1084#2716: unknown directive "serve" in c:\work\wt-nmp\conf\domains.d/aaaaa.conf:1
+2014/11/25 17:44:52 [emerg] 2268#3808: unknown directive "serve" in c:\work\wt-nmp\conf\domains.d/aaaaa.conf:1
+2014/11/25 17:49:34 [emerg] 3856#2716: unknown directive "serve" in c:\work\wt-nmp\conf\domains.d/aaaaa.conf:1
+2014/11/25 17:56:31 [emerg] 3064#1296: unknown directive "serve" in c:\work\wt-nmp\conf\domains.d/aaaaa.conf:1
+2014/11/25 18:03:24 [emerg] 2472#1504: unknown directive "serve" in c:\work\wt-nmp\conf\domains.d/aaaaa.conf:1
+2014/11/25 18:03:52 [emerg] 2224#3540: unknown directive "serve" in c:\work\wt-nmp\conf\domains.d/aaaaa.conf:1
+2014/11/25 18:06:23 [emerg] 2544#2820: unknown directive "serve" in c:\work\wt-nmp\conf\domains.d/aaaaa.conf:1
+2014/11/25 18:06:44 [emerg] 2856#2508: unknown directive "serve" in c:\work\wt-nmp\conf\domains.d/aaaaa.conf:1
+2014/11/25 18:07:09 [emerg] 4060#2616: invalid parameter "listen" in c:\work\wt-nmp\conf\domains.d/aaaaa.conf:3
+2014/11/25 18:07:17 [emerg] 2028#856: invalid parameter "listen" in c:\work\wt-nmp\conf\domains.d/aaaaa.conf:3
+2014/11/25 18:07:36 [emerg] 3520#3444: duplicate listen options for [::1]:80 in c:\work\wt-nmp\conf\domains.d/aaaaa.conf:3
+2014/11/25 18:07:41 [emerg] 3480#1288: duplicate listen options for [::1]:80 in c:\work\wt-nmp\conf\domains.d/aaaaa.conf:3
+2014/11/25 18:08:02 [emerg] 1196#3864: duplicate listen options for [::1]:80 in c:\work\wt-nmp\conf\domains.d/aaaaa.conf:3
+2014/11/25 18:31:15 [notice] 1284#2812: signal process started
+2014/11/25 18:33:08 [notice] 2452#3064: signal process started
+2014/11/25 18:36:50 [notice] 276#1032: signal process started
+2014/11/25 18:37:06 [notice] 3716#3868: signal process started
+2014/11/25 19:43:29 [emerg] 3288#4052: invalid number of arguments in "root" directive in c:\work\wt-nmp\conf\domains.d/er45te reXXX  XX.conf:4
+2014/11/25 19:47:19 [notice] 3436#3232: signal process started
+2014/11/25 19:58:57 [notice] 392#3892: signal process started
+2014/11/25 20:16:44 [notice] 3476#2284: signal process started
+2014/11/25 20:41:38 [notice] 3816#2464: signal process started
+2014/11/26 23:51:30 [notice] 2564#388: signal process started
+2014/12/02 16:49:59 [notice] 4988#4984: signal process started
+2014/12/07 17:45:33 [emerg] 1064#2032: "root" directive is duplicate in c:\work\wt-nmp\conf\domains.d/11111.conf:5
+2014/12/07 17:46:35 [emerg] 792#3828: unknown directive "rootSex" in c:\work\wt-nmp\conf\domains.d/11111.conf:4
+2014/12/07 17:52:16 [emerg] 3720#3196: invalid variable name "root" in c:\work\wt-nmp\conf\domains.d/11111.conf:5
+2014/12/07 17:58:24 [emerg] 1176#3344: "alias" directive is not allowed here in c:\work\wt-nmp\conf\domains.d/11111.conf:5
+2014/12/07 18:00:40 [emerg] 3556#3740: "alias" directive is not allowed here in c:\work\wt-nmp\conf\domains.d/11111AAAAA.conf:5
+2014/12/07 18:00:45 [emerg] 4072#680: "alias" directive is not allowed here in c:\work\wt-nmp\conf\domains.d/11111AAAAA.conf:5
