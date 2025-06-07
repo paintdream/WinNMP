@@ -67,17 +67,16 @@ B<context:> I<if in location>
 Adds the specified field to a response header provided that
 the response code equals 200, 201 (1.3.10), 204, 206, 301, 302, 303, 304,
 307 (1.1.16, 1.0.13), or 308 (1.13.0).
-The value can contain variables.
+Parameter value can contain variables.
 
 
 
 
 
 There could be several C<add_header> directives.
-These directives are inherited from the previous level if and
-only if there are no
-C<add_header>
-directives defined on the current level.
+These directives are inherited from the previous configuration level
+if and only if there are no C<add_header> directives
+defined on the current level.
 
 
 
@@ -122,17 +121,16 @@ This directive appeared in version 1.13.2.
 
 Adds the specified field to the end of a response provided that
 the response code equals 200, 201, 206, 301, 302, 303, 307, or 308.
-The value can contain variables.
+Parameter value can contain variables.
 
 
 
 
 
 There could be several C<add_trailer> directives.
-These directives are inherited from the previous level if and
-only if there are no
-C<add_trailer>
-directives defined on the current level.
+These directives are inherited from the previous configuration level
+if and only if there are no C<add_trailer> directives
+defined on the current level.
 
 
 
@@ -210,8 +208,6 @@ the “C<@>” prefix (0.7.9, 0.6.34):
 
 
 
-The C<epoch> parameter corresponds to the absolute time
-“C<Thu, 01 Jan 1970 00:00:01 GMT>”.
 The contents of the C<Cache-Control> field depends
 on the sign of the specified time:
 
@@ -237,6 +233,14 @@ where I<C<t>> is a time specified in the directive, in seconds.
 =back
 
 
+
+
+
+
+
+The C<epoch> parameter sets C<Expires>
+to the value “C<Thu, 01 Jan 1970 00:00:01 GMT>”,
+and C<Cache-Control> to “C<no-cache>”.
 
 
 

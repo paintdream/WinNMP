@@ -139,6 +139,15 @@ a C<gdb> script like the following one:
     dump binary memory debug_log.txt $buf->start $buf->end
 
 
+Or using an C<lldb> script as follows:
+
+    
+    expr ngx_log_t *$log = ngx_cycle->log
+    expr while ($log->writer != ngx_log_memory_writer) { $log = $log->next; }
+    expr ngx_log_memory_buf_t *$buf = (ngx_log_memory_buf_t *) $log->wdata
+    memory read --force --outfile debug_log.txt --binary $buf->start $buf->end
+
+
 
 
 

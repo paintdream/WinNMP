@@ -1,5 +1,6 @@
 local newtab = require "table.new"
 local cleartab = require "table.clear"
+local setmetatable = setmetatable
 
 
 local _M = newtab(0, 2)
@@ -32,18 +33,15 @@ end
 
 function _M.release(tag, obj, noclear)
     if not obj then
-        error("object empty")
+        error("object empty", 2)
     end
+
     local pool = pools[tag]
     if not pool then
         pool = newtab(4, 1)
         pools[tag] = pool
         pool.c = 0
         pool[0] = 0
-    end
-
-    if not noclear then
-        cleartab(obj)
     end
 
     do
@@ -60,10 +58,13 @@ function _M.release(tag, obj, noclear)
 
     local len = pool[0] + 1
     if len > max_pool_size then
-        cleartab(pool)
-        pool.c = 0
-        pool[0] = 1
-        len = 1
+        -- discard it simply
+        return
+    end
+
+    if not noclear then
+        setmetatable(obj, nil)
+        cleartab(obj)
     end
 
     pool[len] = obj

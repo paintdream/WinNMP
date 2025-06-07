@@ -11,13 +11,13 @@ contributing_changes - Contributing Changes
 
 
 
-L<Mercurial|https://www.mercurial-scm.org> is used
+L<GitHub|https://github.com> is used
 to store source code.
-The L<repository|http://hg.nginx.org/nginx> can be cloned
+The L<repository|https://github.com/nginx/nginx> can be cloned
 with the following command:
 
     
-    hg clone http://hg.nginx.org/nginx
+    git clone https://github.com/nginx/nginx.git
 
 
 
@@ -28,45 +28,11 @@ with the following command:
 
 
 
-Changes should be formatted according to the code style used by nginx.
-Code formatting should not rely on such editor features like syntax
-highlighting or automatic line breaking.
-Below are some basic rules:
-
-=over
-
-
-
-
-=item *
-
-maximum text width is 80 characters
-
-
-
-=item *
-
-indentation is four spaces
-
-
-
-=item *
-
-no tabs
-
-
-
-=item *
-
-logical code blocks in a file are separated with two empty lines
-
-
-
-=back
-
-
-Examine how existing nginx sources are formatted and mimic this style
-in your code.
+Changes should be formatted according to the
+L<code style|development_guide>
+used by nginx.
+Sometimes, there is no clear rule; in such cases
+examine how existing nginx sources are formatted and mimic this style.
 Changes will more likely be accepted if style corresponds to the surrounding
 code.
 
@@ -74,11 +40,11 @@ code.
 
 
 
-Commit the changes to create a Mercurial
-L<changeset|https://www.mercurial-scm.org/wiki/ChangeSet>.
+L<Commit|https://docs.github.com/en/pull-requests/committing-changes-to-your-project/creating-and-editing-commits/about-commits>
+the changes in your nginx GitHub fork.
 Please ensure that the specified
-L<e-mail|https://www.mercurial-scm.org/wiki/QuickStart#Setting_a_username>
-address and real name of the change’s author are correct.
+L<e-mail|https://docs.github.com/en/get-started/getting-started-with-git/setting-your-username-in-git>
+address and real name of the author are correct.
 
 
 
@@ -86,25 +52,25 @@ address and real name of the change’s author are correct.
 
 The commit message should have a single-line synopsis followed by verbose
 description after an empty line.
-It is desirable that the first line is no longer than 67 symbols.
-The resulting changeset as a patch can be obtained using the
-C<hg export> command:
+It is desirable that the first line is no longer than 67 symbols,
+and the remaining lines are no longer than 76 symbols.
+The resulting commit can be obtained using the
+C<git show> command:
 
     
-    # HG changeset patch
-    # User Filipe Da Silva <username@example.com>
-    # Date 1368089668 -7200
-    #      Thu May 09 10:54:28 2013 +0200
-    # Node ID 2220de0521ca2c0b664a8ea1e201ce1cb90fd7a2
-    # Parent  822b82191940ef309cd1e6502f94d50d811252a1
-    Mail: removed surplus ngx_close_connection() call.
+    commit 8597218f386351d6c6cdced24af6716e19a18fc3
+    Author: Filipe Da Silva <username@example.com>
+    Date:   Thu May 9 10:54:28 2013 +0200
     
-    It is already called for a peer connection a few lines above.
+        Mail: removed surplus ngx_close_connection() call.
     
-    diff -r 822b82191940 -r 2220de0521ca src/mail/ngx_mail_auth_http_module.c
-    --- a/src/mail/ngx_mail_auth_http_module.c      Wed May 15 15:04:49 2013 +0400
-    +++ b/src/mail/ngx_mail_auth_http_module.c      Thu May 09 10:54:28 2013 +0200
-    @@ -699,7 +699,6 @@ ngx_mail_auth_http_process_headers(ngx_m
+        It is already called for a peer connection a few lines above.
+    
+    diff --git a/src/mail/ngx_mail_auth_http_module.c b/src/mail/ngx_mail_auth_http_module.c
+    index 2e9b9f24d..8094bbc5c 100644
+    --- a/src/mail/ngx_mail_auth_http_module.c
+    +++ b/src/mail/ngx_mail_auth_http_module.c
+    @@ -699,7 +699,6 @@ ngx_mail_auth_http_process_headers(ngx_mail_session_t *s,
     
                          p = ngx_pnalloc(s->connection->pool, ctx->err.len);
                          if (p == NULL) {
@@ -148,11 +114,11 @@ case, if possible.
 
 Passing your changes through the test suite is a good way to ensure
 that they do not cause a regression.
-The L<repository|http://hg.nginx.org/nginx-tests> with
+The L<repository|https://github.com/nginx/nginx-tests> with
 tests can be cloned with the following command:
 
     
-    hg clone http://hg.nginx.org/nginx-tests
+    git clone https://github.com/nginx/nginx-tests.git
 
 
 
@@ -169,13 +135,28 @@ tests can be cloned with the following command:
 
 
 
-The proposed changes should be sent to the
-L<nginx development|support>
-mailing list.
-The preferred and convenient method of submitting changesets
-is with the
-L<patchbomb|https://www.mercurial-scm.org/wiki/PatchbombExtension>
-extension.
+The proposed changes should be submitted from your fork to
+L<nginx repository|https://github.com/nginx/nginx>
+as a
+L<pull request|https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork>.
+
+
+
+
+=head1 Website
+
+
+
+GitHub is used to store the sources for this website.
+The L<repository|https://www.github.com/nginx/nginx.org>
+can be cloned with the following command:
+
+    
+    git clone https://github.com/nginx/nginx.org.git
+
+
+Documentation changes should be submitted from your fork
+as a pull request.
 
 
 

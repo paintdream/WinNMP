@@ -30,7 +30,7 @@ Responses to mirror subrequests are ignored.
         proxy_pass http://backend;
     }
     
-    location /mirror {
+    location = /mirror {
         internal;
         proxy_pass http://test_backend$request_uri;
     }
@@ -64,7 +64,7 @@ B<context:> I<location>
 
 
 Sets the URI to which an original request will be mirrored.
-Several mirrors can be specified on the same level.
+Several mirrors can be specified on the same configuration level.
 
 
 
@@ -112,7 +112,7 @@ directives will be disabled.
         proxy_pass http://backend;
     }
     
-    location /mirror {
+    location = /mirror {
         internal;
         proxy_pass http://log_backend;
         proxy_pass_request_body off;

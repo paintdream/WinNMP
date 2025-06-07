@@ -34,6 +34,15 @@ configuration I<C<file>> instead of a default file.
 
 =item *
 
+C<-e I<C<file>>>E<mdash>use an alternative
+error log I<C<file>> to store the log
+instead of a default file (1.19.5).
+The special value C<stderr> selects the standard error file.
+
+
+
+=item *
+
 C<-g I<C<directives>>>E<mdash>set
 L<global configuration directives|ngx_core_module>,
 for example,

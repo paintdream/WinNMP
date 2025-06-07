@@ -11,7 +11,7 @@ ngx_google_perftools_module - Module ngx_google_perftools_module
 
 
 
-The C<ngx_google_perftoos_module> module (0.6.29) enables
+The C<ngx_google_perftools_module> module (0.6.29) enables
 profiling of nginx worker processes using
 L<Google Performance Tools|https://github.com/gperftools/gperftools>.
 The module is intended for nginx developers.

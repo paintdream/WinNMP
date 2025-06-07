@@ -115,7 +115,7 @@ images and requests starting with "E<sol>downloadE<sol>".
     
             error_page  404  /404.html;
     
-            location /404.html {
+            location = /404.html {
                 root  /spool/www;
             }
     

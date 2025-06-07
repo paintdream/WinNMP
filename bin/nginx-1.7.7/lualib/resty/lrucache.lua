@@ -10,6 +10,15 @@ local ngx_now = ngx.now
 local uintptr_t = ffi.typeof("uintptr_t")
 local setmetatable = setmetatable
 local tonumber = tonumber
+local type = type
+local new_tab
+do
+    local ok
+    ok, new_tab = pcall(require, "table.new")
+    if not ok then
+        new_tab = function(narr, nrec) return {} end
+    end
+end
 
 
 if string.find(jit.version, " 2.0", 1, true) then
@@ -42,6 +51,7 @@ ffi.cdef[[
         double             expire;  /* in seconds */
         lrucache_queue_t  *prev;
         lrucache_queue_t  *next;
+        uint32_t           user_flags;
     };
 ]]
 
@@ -76,6 +86,7 @@ local function queue_init(size)
         local prev = q[0]
         for i = 1, size do
           local e = q + i
+          e.user_flags = 0
           prev.next = e
           e.prev = prev
           prev = e
@@ -130,13 +141,14 @@ end
 -- true module stuffs
 
 local _M = {
-    _VERSION = '0.09'
+    _VERSION = '0.14'
 }
 local mt = { __index = _M }
 
 
 local function ptr2num(ptr)
-    return tonumber(ffi_cast(uintptr_t, ptr))
+    local v = tonumber(ffi_cast(uintptr_t, ptr))
+    return v
 end
 
 
@@ -151,8 +163,21 @@ function _M.new(size)
         cache_queue = queue_init(),
         key2node = {},
         node2key = {},
+        num_items = 0,
+        max_items = size,
     }
-    return setmetatable(self, mt)
+    setmetatable(self, mt)
+    return self
+end
+
+
+function _M.count(self)
+    return self.num_items
+end
+
+
+function _M.capacity(self)
+    return self.max_items
 end
 
 
@@ -172,9 +197,10 @@ function _M.get(self, key)
 
     if node.expire >= 0 and node.expire < ngx_now() then
         -- print("expired: ", node.expire, " > ", ngx_now())
-        return nil, val
+        return nil, val, node.user_flags
     end
-    return val
+
+    return val, nil, node.user_flags
 end
 
 
@@ -193,11 +219,12 @@ function _M.delete(self, key)
 
     queue_remove(node)
     queue_insert_tail(self.free_queue, node)
+    self.num_items = self.num_items - 1
     return true
 end
 
 
-function _M.set(self, key, value, ttl)
+function _M.set(self, key, value, ttl, flags)
     local hasht = self.hasht
     hasht[key] = value
 
@@ -223,6 +250,8 @@ function _M.set(self, key, value, ttl)
         else
             -- take a free queue node
             node = queue_head(free_queue)
+            -- only add count if we are not evicting
+            self.num_items = self.num_items + 1
             -- print(key, ": get a new free node: ", tostring(node))
         end
 
@@ -238,6 +267,44 @@ function _M.set(self, key, value, ttl)
     else
         node.expire = -1
     end
+
+    if type(flags) == "number" and flags >= 0 then
+        node.user_flags = flags
+
+    else
+        node.user_flags = 0
+    end
+end
+
+
+function _M.get_keys(self, max_count, res)
+    if not max_count or max_count == 0 then
+        max_count = self.num_items
+    end
+
+    if not res then
+        res = new_tab(max_count + 1, 0) -- + 1 for trailing hole
+    end
+
+    local cache_queue = self.cache_queue
+    local node2key = self.node2key
+
+    local i = 0
+    local node = queue_head(cache_queue)
+
+    while node ~= cache_queue do
+        if i >= max_count then
+            break
+        end
+
+        i = i + 1
+        res[i] = node2key[ptr2num(node)]
+        node = node.next
+    end
+
+    res[i + 1] = nil
+
+    return res
 end
 
 
@@ -245,6 +312,8 @@ function _M.flush_all(self)
     tb_clear(self.hasht)
     tb_clear(self.node2key)
     tb_clear(self.key2node)
+
+    self.num_items = 0
 
     local cache_queue = self.cache_queue
     local free_queue = self.free_queue

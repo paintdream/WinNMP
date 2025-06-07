@@ -4,7 +4,13 @@
 local ffi = require 'ffi'
 local base = require "resty.core.base"
 local bit = require "bit"
+local subsystem = ngx.config.subsystem
 require "resty.core.time"  -- for ngx.now used by resty.lrucache
+
+if subsystem == 'http' then
+    require "resty.core.phase"  -- for ngx.get_phase
+end
+
 local lrucache = require "resty.lrucache"
 
 local lrucache_get = lrucache.get
@@ -29,7 +35,6 @@ local tonumber = tonumber
 local get_string_buf = base.get_string_buf
 local get_string_buf_size = base.get_string_buf_size
 local new_tab = base.new_tab
-local subsystem = ngx.config.subsystem
 local ngx_phase = ngx.get_phase
 local ngx_log = ngx.log
 local ngx_NOTICE = ngx.NOTICE
@@ -40,19 +45,30 @@ local _M = {
 }
 
 
-if not ngx.re then
-    ngx.re = {}
+ngx.re = new_tab(0, 5)
+
+
+local pcre_ver_fn
+
+if subsystem == 'http' then
+    ffi.cdef[[
+        const char *ngx_http_lua_ffi_pcre_version(void);
+    ]]
+    pcre_ver_fn = C.ngx_http_lua_ffi_pcre_version
+
+elseif subsystem == 'stream' then
+    ffi.cdef[[
+        const char *ngx_stream_lua_ffi_pcre_version(void);
+    ]]
+    pcre_ver_fn = C.ngx_stream_lua_ffi_pcre_version
+
+else
+    error("unsupported subsystem: " .. tostring(subsystem))
 end
-
-
-ffi.cdef[[
-    const char *pcre_version(void);
-]]
-
 
 local pcre_ver
 
-if not pcall(function() pcre_ver = ffi_string(C.pcre_version()) end) then
+if not pcall(function() pcre_ver = ffi_string(pcre_ver_fn()) end) then
     setmetatable(ngx.re, {
         __index = function(_, key)
             error("no support for 'ngx.re." .. key .. "': OpenResty was " ..
@@ -60,11 +76,13 @@ if not pcall(function() pcre_ver = ffi_string(C.pcre_version()) end) then
         end
     })
 
+    _M.no_pcre = true
+
     return _M
 end
 
 
-local MAX_ERR_MSG_LEN = 128
+local MAX_ERR_MSG_LEN = 256
 
 
 local FLAG_COMPILE_ONCE  = 0x01
@@ -84,6 +102,7 @@ local PCRE_DUPNAMES          = 0x0080000
 local PCRE_JAVASCRIPT_COMPAT = 0x2000000
 
 
+-- PCRE2_ERROR_NOMATCH uses the same value
 local PCRE_ERROR_NOMATCH = -1
 
 
@@ -117,22 +136,44 @@ local ngx_lua_ffi_script_eval_data
 -- TODO: improve this workaround when PCRE allows for unspecifying the MAP_JIT
 -- option.
 local no_jit_in_init
+local pcre_ver_num
+
+local maj, min = string.match(pcre_ver, "^(%d+)%.(%d+)")
+if maj and min then
+    pcre_ver_num = tonumber(maj .. min)
+end
 
 if jit.os == "OSX" then
-    local maj, min = string.match(pcre_ver, "^(%d+)%.(%d+)")
-    if maj and min then
-        local pcre_ver_num = tonumber(maj .. min)
-
-        if pcre_ver_num >= 843 then
-            no_jit_in_init = true
-        end
-
-    else
+    if pcre_ver_num == nil then
         -- assume this version is faulty as well
+        no_jit_in_init = true
+
+    -- PCRE2 is also subject to this issue on macOS
+    elseif pcre_ver_num >= 843 then
         no_jit_in_init = true
     end
 end
 
+-- pcre2
+if pcre_ver_num > 845 then
+    -- option
+    PCRE_CASELESS          = 0x00000008
+    PCRE_MULTILINE         = 0x00000400
+    PCRE_DOTALL            = 0x00000020
+    PCRE_EXTENDED          = 0x00000080
+    PCRE_ANCHORED          = 0x80000000
+    PCRE_UTF8              = 0x00080000
+    PCRE_DUPNAMES          = 0x00000040
+    -- In the pcre2, The PCRE_JAVASCRIPT_COMPAT option has been split into
+    -- independent functional options PCRE2_ALT_BSUX, PCRE2_ALLOW_EMPTY_CLASS,
+    -- and PCRE2_MATCH_UNSET_BACKREF.
+    local PCRE2_ALT_BSUX            = 0x00000002
+    local PCRE2_ALLOW_EMPTY_CLASS   = 0x00000001
+    local PCRE2_MATCH_UNSET_BACKREF = 0x00000200
+    PCRE_JAVASCRIPT_COMPAT = bor(PCRE2_ALT_BSUX, PCRE2_ALLOW_EMPTY_CLASS)
+    PCRE_JAVASCRIPT_COMPAT = bor(PCRE2_MATCH_UNSET_BACKREF,
+                                 PCRE_JAVASCRIPT_COMPAT)
+end
 
 if subsystem == 'http' then
     ffi.cdef[[
@@ -1020,7 +1061,7 @@ local function re_sub_func_helper(subj, regex, replace, opts, global)
     end
 
     if count > 0 then
-        if pos < subj_len then
+        if cp_pos < subj_len then
             local suffix_len = subj_len - cp_pos
 
             local new_dst_len = dst_len + suffix_len
@@ -1149,7 +1190,7 @@ local function re_sub_str_helper(subj, regex, replace, opts, global)
     end
 
     if count > 0 then
-        if pos < subj_len then
+        if cp_pos < subj_len then
             local suffix_len = subj_len - cp_pos
 
             local new_dst_len = dst_len + suffix_len

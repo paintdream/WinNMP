@@ -13,7 +13,8 @@ windows - nginx for Windows
 
 Version of nginx for Windows uses the native Win32 API (not the Cygwin emulation
 layer).
-Only the C<select> connection processing method is currently used,
+Only the C<select> and C<poll> (1.15.9)
+connection processing methods are currently used,
 so high performance and scalability should not be expected.
 Due to this and some other known issues version of nginx for Windows
 is considered to be a I<beta> version.
@@ -112,13 +113,7 @@ actually does any work.
 
 =item *
 
-A worker can handle no more than 1024 simultaneous connections.
-
-
-
-=item *
-
-The UDP proxy functionality is not supported.
+The UDP (and, inherently, QUIC) functionality is not supported.
 
 
 

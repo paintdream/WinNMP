@@ -34,21 +34,22 @@ Supported methods are:
 
 
 
-=item C<login>
-
-
-
-
-L<AUTH=LOGIN|https://tools.ietf.org/html/draft-murchison-sasl-login-00>
-
-
-
 =item C<plain>
 
 
 
 
-L<AUTH=PLAIN|https://tools.ietf.org/html/rfc4616>
+L<LOGIN|https://datatracker.ietf.org/doc/html/rfc3501>,
+L<AUTH=PLAIN|https://datatracker.ietf.org/doc/html/rfc4616>
+
+
+
+=item C<login>
+
+
+
+
+L<AUTH=LOGIN|https://datatracker.ietf.org/doc/html/draft-murchison-sasl-login-00>
 
 
 
@@ -57,7 +58,7 @@ L<AUTH=PLAIN|https://tools.ietf.org/html/rfc4616>
 
 
 
-L<AUTH=CRAM-MD5|https://tools.ietf.org/html/rfc2195>.
+L<AUTH=CRAM-MD5|https://datatracker.ietf.org/doc/html/rfc2195>.
 In order for this method to work, the password must be stored unencrypted.
 
 
@@ -67,7 +68,7 @@ In order for this method to work, the password must be stored unencrypted.
 
 
 
-L<AUTH=EXTERNAL|https://tools.ietf.org/html/rfc4422> (1.11.6).
+L<AUTH=EXTERNAL|https://datatracker.ietf.org/doc/html/rfc4422> (1.11.6).
 
 
 
@@ -75,6 +76,18 @@ L<AUTH=EXTERNAL|https://tools.ietf.org/html/rfc4422> (1.11.6).
 =back
 
 
+
+
+
+
+
+Plain text authentication methods
+(the C<LOGIN> command, C<AUTH=PLAIN>,
+and C<AUTH=LOGIN>) are always enabled,
+though if the C<plain> and C<login> methods
+are not specified,
+C<AUTH=PLAIN> and C<AUTH=LOGIN>
+will not be automatically included in L</imap_capabilities>.
 
 
 
@@ -101,11 +114,11 @@ B<context:> I<server>
 
 
 Sets the
-L<IMAP protocol|https://tools.ietf.org/html/rfc3501>
+L<IMAP protocol|https://datatracker.ietf.org/doc/html/rfc3501>
 extensions list that is passed to the client in response to
 the C<CAPABILITY> command.
 The authentication methods specified in the L</imap_auth> directive and
-L<STARTTLS|https://tools.ietf.org/html/rfc2595>
+L<STARTTLS|https://datatracker.ietf.org/doc/html/rfc2595>
 are automatically added to this list depending on the
 L<ngx_mail_ssl_module> directive value.
 
@@ -150,7 +163,7 @@ B<context:> I<server>
 
 
 
-Sets the IMAP commands read buffer size.
+Sets the I<C<size>> of the buffer used for reading IMAP commands.
 By default, the buffer size is equal to one memory page.
 This is either 4K or 8K, depending on a platform.
 

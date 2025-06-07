@@ -82,7 +82,7 @@ DTrace script for such request logging can be as simple as:
 
 
 It should be noted that in the example above DTrace requires some knowledge
-about the C<ngx_http_process_request> structure.
+about the C<ngx_http_request_t> structure.
 Unfortunately while it is possible to use a specific C<#include>
 directive in the DTrace script and then pass it to a C preprocessor
 (with the C<-C> flag), that doesn’t really work.
@@ -131,7 +131,7 @@ frequently changed.
 
 
 
-Then there’s the C<ngx_http_process_request_t> structure that
+Then there’s the C<ngx_http_request_t> structure that
 contains a lot of pointers to other structures.
 Because these pointers are really irrelevant to this script, and because they
 have the same size, it is possible to just replace them with void pointers.

@@ -30,9 +30,9 @@ from nginx.org can be used.
 
 
 
-On FreeBSD, nginx can be installed either from the L<packages|http://www.freebsd.org/doc/handbook/pkgng-intro.html>
+On FreeBSD, nginx can be installed either from the L<packages|https://docs.freebsd.org/en/books/handbook/ports/#pkgng-intro>
 or through the
-L<ports|http://www.freebsd.org/doc/handbook/ports-using.html>
+L<ports|https://docs.freebsd.org/en/books/handbook/ports/#ports-using>
 system.
 The ports system provides greater flexibility, allowing selection among
 a wide range of options.

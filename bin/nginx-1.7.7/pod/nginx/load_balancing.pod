@@ -109,7 +109,7 @@ balancing to distribute the requests.
 
 
 Reverse proxy implementation in nginx includes load balancing for HTTP,
-HTTPS, FastCGI, uwsgi, SCGI, and memcached.
+HTTPS, FastCGI, uwsgi, SCGI, memcached, and gRPC.
 
 
 
@@ -122,11 +122,12 @@ as the protocol.
 
 
 
-When setting up load balancing for FastCGI, uwsgi, SCGI, or memcached, use
+When setting up load balancing for FastCGI, uwsgi, SCGI, memcached, or gRPC, use
 L<ngx_http_fastcgi_module>,
 L<ngx_http_uwsgi_module>,
-L<ngx_http_scgi_module>, and
-L<ngx_http_memcached_module>
+L<ngx_http_scgi_module>,
+L<ngx_http_memcached_module>, and
+L<ngx_http_grpc_module>
 directives respectively.
 
 
@@ -333,39 +334,11 @@ L<reference documentation|..>.
 
 
 Last but not least,
-L<application load balancing|https://www.nginx.com/products/application-load-balancing/>,
-L<application health checks|https://www.nginx.com/products/application-health-checks/>,
-L<activity monitoring|https://www.nginx.com/products/live-activity-monitoring/> and
-L<on-the-fly reconfiguration|https://www.nginx.com/products/on-the-fly-reconfiguration/> of server groups are available
+application load balancing,
+application health checks,
+activity monitoring and
+on-the-fly reconfiguration of server groups are available
 as part of our paid NGINX Plus subscriptions.
-
-
-
-
-
-The following articles describe load balancing with NGINX Plus
-in more detail:
-
-=over
-
-
-
-
-=item *
-
-L<Load Balancing with NGINX and NGINX Plus|https://www.nginx.com/blog/load-balancing-with-nginx-plus/>
-
-
-
-=item *
-
-L<Load Balancing with NGINX and NGINX Plus part 2|https://www.nginx.com/blog/load-balancing-with-nginx-plus-part2/>
-
-
-
-=back
-
-
 
 
 

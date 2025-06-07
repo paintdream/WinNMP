@@ -56,8 +56,7 @@ configuration parameter.
         }
     
         server {
-            listen 127.0.0.1:53 udp;
-            proxy_responses 1;
+            listen 127.0.0.1:53 udp reuseport;
             proxy_timeout 20s;
             proxy_pass dns;
         }
@@ -80,12 +79,17 @@ configuration parameter.
 
 B<syntax:> listen I<
     I<C<address>>:I<C<port>>
+    [C<default_server>]
     [C<ssl>]
     [C<udp>]
     [C<proxy_protocol>]
+    [C<setfib>=I<C<number>>]
+    [C<fastopen>=I<C<number>>]
     [C<backlog>=I<C<number>>]
     [C<rcvbuf>=I<C<size>>]
     [C<sndbuf>=I<C<size>>]
+    [C<accept_filter>=I<C<filter>>]
+    [C<deferred>]
     [C<bind>]
     [C<ipv6only>=C<on>E<verbar>C<off>]
     [C<reuseport>]
@@ -130,6 +134,30 @@ prefix:
 
 
 
+Port ranges (1.15.10) are specified with the
+first and last port separated by a hyphen:
+
+    
+    listen 127.0.0.1:12345-12399;
+    listen 12345-12399;
+
+
+
+
+
+
+
+The C<default_server> parameter, if present,
+will cause the server to become the default server for the specified
+I<C<address>>:I<C<port>> pair (1.25.5).
+If none of the directives have the C<default_server>
+parameter then the first server with the
+I<C<address>>:I<C<port>> pair will be
+the default server for this pair.
+
+
+
+
 
 The C<ssl> parameter allows specifying that all
 connections accepted on this port should work in SSL mode.
@@ -140,6 +168,9 @@ connections accepted on this port should work in SSL mode.
 
 The C<udp> parameter configures a listening socket
 for working with datagrams (1.9.13).
+In order to handle packets from the same address and port in the same session,
+the C<reuseport> parameter
+should also be specified.
 
 
 
@@ -148,7 +179,12 @@ for working with datagrams (1.9.13).
 The C<proxy_protocol> parameter (1.11.4)
 allows specifying that all connections accepted on this port should use the
 L<PROXY
-protocol|http://www.haproxy.org/download/1.5/doc/proxy-protocol.txt>.
+protocol|http://www.haproxy.org/download/1.8/doc/proxy-protocol.txt>.
+
+B<NOTE>
+
+The PROXY protocol version 2 is supported since version 1.13.11.
+
 
 
 
@@ -156,8 +192,47 @@ protocol|http://www.haproxy.org/download/1.5/doc/proxy-protocol.txt>.
 
 The C<listen> directive
 can have several additional parameters specific to socket-related system calls.
+These parameters can be specified in any
+C<listen> directive, but only once for a given
+I<C<address>>:I<C<port>> pair.
 
 =over
+
+
+
+=item 
+C<setfib>=I<C<number>>
+
+
+
+
+
+this parameter (1.25.5) sets the associated routing table, FIB
+(the C<SO_SETFIB> option) for the listening socket.
+This currently works only on FreeBSD.
+
+
+
+=item 
+C<fastopen>=I<C<number>>
+
+
+
+
+
+enables
+“L<TCP Fast Open|http://en.wikipedia.org/wiki/TCP_Fast_Open>”
+for the listening socket (1.21.0) and
+L<limits|https://datatracker.ietf.org/doc/html/rfc7413#section-5.1>
+the maximum length for the queue of connections that have not yet completed
+the three-way handshake.
+
+B<NOTE>
+
+Do not enable this feature unless the server can handle
+receiving the
+L<same SYN packet with data|https://datatracker.ietf.org/doc/html/rfc7413#section-6.1> more than once.
+
 
 
 
@@ -202,6 +277,37 @@ sets the send buffer size
 
 
 =item 
+C<accept_filter>=I<C<filter>>
+
+
+
+
+
+sets the name of accept filter
+(the C<SO_ACCEPTFILTER> option) for the listening socket
+that filters incoming connections before passing them to
+C<accept> (1.25.5).
+This works only on FreeBSD and NetBSD 5.0+.
+Possible values are
+L<dataready|http://man.freebsd.org/accf_data>
+and
+L<httpready|http://man.freebsd.org/accf_http>.
+
+
+
+=item 
+C<deferred>
+
+
+
+
+
+instructs to use a deferred C<accept>
+(the C<TCP_DEFER_ACCEPT> socket option) on Linux (1.25.5).
+
+
+
+=item 
 C<bind>
 
 
@@ -217,7 +323,12 @@ for the given port (C<*:>I<C<port>>), nginx will
 C<bind> only to C<*:>I<C<port>>.
 It should be noted that the C<getsockname> system call will be
 made in this case to determine the address that accepted the connection.
-If the C<ipv6only>
+If the C<setfib>,
+C<fastopen>,
+C<backlog>, C<rcvbuf>,
+C<sndbuf>, C<accept_filter>,
+C<deferred>, C<ipv6only>,
+C<reuseport>,
 or C<so_keepalive> parameters
 are used then for a given
 I<C<address>>:I<C<port>> pair
@@ -250,9 +361,12 @@ C<reuseport>
 
 this parameter (1.9.1) instructs to create an individual listening socket
 for each worker process
-(using the C<SO_REUSEPORT> socket option), allowing a kernel
+(using the
+C<SO_REUSEPORT> socket option on Linux 3.9+ and DragonFly BSD,
+or C<SO_REUSEPORT_LB> on FreeBSD 12+), allowing a kernel
 to distribute incoming connections between worker processes.
-This currently works only on Linux 3.9+ and DragonFly BSD.
+This currently works only on Linux 3.9+, DragonFly BSD,
+and FreeBSD 12+ (1.15.1).
 
 B<NOTE>
 
@@ -305,8 +419,12 @@ and set the probes count (C<TCP_KEEPCNT>) to 10 probes.
 
 
 
-Different servers must listen on different
+
+B<NOTE>
+
+Before version 1.25.5, different servers must listen on different
 I<C<address>>:I<C<port>> pairs.
+
 
 
 
@@ -415,7 +533,9 @@ the connection is closed.
 B<syntax:> resolver I<
     I<C<address>> ...
     [C<valid>=I<C<time>>]
-    [C<ipv6>=C<on>E<verbar>C<off>]>
+    [C<ipv4>=C<on>E<verbar>C<off>]
+    [C<ipv6>=C<on>E<verbar>C<off>]
+    [C<status_zone>=I<C<zone>>]>
 
 
 
@@ -439,8 +559,8 @@ into addresses, for example:
     resolver 127.0.0.1 [::1]:5353;
 
 
-An address can be specified as a domain name or IP address,
-and an optional port.
+The address can be specified as a domain name or IP address,
+with an optional port.
 If port is not specified, the port 53 is used.
 Name servers are queried in a round-robin fashion.
 
@@ -449,7 +569,8 @@ Name servers are queried in a round-robin fashion.
 
 
 By default, nginx will look up both IPv4 and IPv6 addresses while resolving.
-If looking up of IPv6 addresses is not desired,
+If looking up of IPv4 or IPv6 addresses is not desired,
+the C<ipv4=off> (1.23.1) or
 the C<ipv6=off> parameter can be specified.
 
 
@@ -461,6 +582,29 @@ The optional C<valid> parameter allows overriding it:
 
     
     resolver 127.0.0.1 [::1]:5353 valid=30s;
+
+
+
+B<NOTE>
+
+To prevent DNS spoofing, it is recommended
+configuring DNS servers in a properly secured trusted local network.
+
+
+
+
+
+
+The optional C<status_zone> parameter (1.17.1)
+enables
+L<collection|ngx_http_api_module>
+of DNS server statistics of requests and responses
+in the specified I<C<zone>>.
+The parameter is available as part of our
+commercial subscription.
+
+
+
 
 
 
@@ -530,7 +674,240 @@ B<context:> I<stream>
 
 
 
-Sets the configuration for a server.
+Sets the configuration for a virtual server.
+There is no clear separation between IP-based (based on the IP address)
+and name-based (based on the
+L<TLS
+Server Name Indication extension|http://en.wikipedia.org/wiki/Server_Name_Indication> (SNI, RFC 6066)) (1.25.5)
+virtual servers.
+Instead, the L</listen> directives describe all
+addresses and ports that should accept connections for the server, and the
+L</server_name> directive lists all server names.
+
+
+
+
+
+
+
+=head2 server_name
+
+
+B<syntax:> server_name I<I<C<name>> ...>
+
+
+B<default:> I<"">
+
+
+B<context:> I<server>
+
+
+
+This directive appeared in version 1.25.5.
+
+
+
+
+
+Sets names of a virtual server, for example:
+
+    
+    server {
+        server_name example.com www.example.com;
+    }
+
+
+
+
+
+
+
+The first name becomes the primary server name.
+
+
+
+
+
+Server names can include an asterisk (“C<*>”)
+replacing the first or last part of a name:
+
+    
+    server {
+        server_name example.com *.example.com www.example.*;
+    }
+
+
+Such names are called wildcard names.
+
+
+
+
+
+The first two of the names mentioned above can be combined in one:
+
+    
+    server {
+        server_name .example.com;
+    }
+
+
+
+
+
+
+
+It is also possible to use regular expressions in server names,
+preceding the name with a tilde (“C<~>”):
+
+    
+    server {
+        server_name www.example.com ~^www\d+\.example\.com$;
+    }
+
+
+
+
+
+
+
+Regular expressions can contain captures that can later
+be used in other directives:
+
+    
+    server {
+        server_name ~^(www\.)?(.+)$;
+    
+        proxy_pass www.$2:12345;
+    }
+
+
+
+
+
+
+
+Named captures in regular expressions create variables
+that can later be used in other directives:
+
+    
+    server {
+        server_name ~^(www\.)?(?<domain>.+)$;
+    
+        proxy_pass www.$domain:12345;
+    }
+
+
+
+
+
+
+
+If the directive’s parameter is set to “C<$hostname>”, the
+machine’s hostname is inserted.
+
+
+
+
+
+During searching for a virtual server by name,
+if the name matches more than one of the specified variants,
+(e.g. both a wildcard name and regular expression match), the first matching
+variant will be chosen, in the following order of priority:
+
+=over
+
+
+
+
+=item 1.
+
+the exact name
+
+
+
+=item 2.
+
+the longest wildcard name starting with an asterisk,
+e.g. “C<*.example.com>”
+
+
+
+=item 3.
+
+the longest wildcard name ending with an asterisk,
+e.g. “C<mail.*>”
+
+
+
+=item 4.
+
+the first matching regular expression
+(in order of appearance in the configuration file)
+
+
+
+=back
+
+
+
+
+
+
+
+
+
+=head2 server_names_hash_bucket_size
+
+
+B<syntax:> server_names_hash_bucket_size I<I<C<size>>>
+
+
+B<default:> I<32E<verbar>64E<verbar>128>
+
+
+B<context:> I<stream>
+
+
+
+This directive appeared in version 1.25.5.
+
+
+
+
+
+Sets the bucket size for the server names hash tables.
+The default value depends on the size of the processor’s cache line.
+The details of setting up hash tables are provided in a separate
+L<document|hash>.
+
+
+
+
+
+
+
+=head2 server_names_hash_max_size
+
+
+B<syntax:> server_names_hash_max_size I<I<C<size>>>
+
+
+B<default:> I<512>
+
+
+B<context:> I<stream>
+
+
+
+This directive appeared in version 1.25.5.
+
+
+
+
+
+Sets the maximum I<C<size>> of the server names hash tables.
+The details of setting up hash tables are provided in a separate
+L<document|hash>.
 
 
 
@@ -748,8 +1125,7 @@ C<TCP> or C<UDP> (1.11.4)
 
 
 
-client address from the PROXY protocol header, or an empty string otherwise
-(1.11.4)
+client address from the PROXY protocol header (1.11.4)
 
 
 The PROXY protocol must be previously enabled by setting the
@@ -765,8 +1141,198 @@ in the L</listen> directive.
 
 
 
-client port from the PROXY protocol header, or an empty string otherwise
-(1.11.4)
+client port from the PROXY protocol header (1.11.4)
+
+
+The PROXY protocol must be previously enabled by setting the
+C<proxy_protocol> parameter
+in the L</listen> directive.
+
+
+
+
+
+=item C<$proxy_protocol_server_addr>
+
+
+
+
+server address from the PROXY protocol header (1.17.6)
+
+
+The PROXY protocol must be previously enabled by setting the
+C<proxy_protocol> parameter
+in the L</listen> directive.
+
+
+
+
+
+=item C<$proxy_protocol_server_port>
+
+
+
+
+server port from the PROXY protocol header (1.17.6)
+
+
+The PROXY protocol must be previously enabled by setting the
+C<proxy_protocol> parameter
+in the L</listen> directive.
+
+
+
+
+
+=item C<$proxy_protocol_tlv_>I<C<name>>
+
+
+
+
+TLV from the PROXY Protocol header (1.23.2).
+The C<name> can be a TLV type name or its numeric value.
+In the latter case, the value is hexadecimal
+and should be prefixed with C<0x>:
+
+
+    
+    $proxy_protocol_tlv_alpn
+    $proxy_protocol_tlv_0x01
+
+
+SSL TLVs can also be accessed by TLV type name or its numeric value,
+both prefixed by C<ssl_>:
+
+    
+    $proxy_protocol_tlv_ssl_version
+    $proxy_protocol_tlv_ssl_0x21
+
+
+
+
+
+The following TLV type names are supported:
+
+=over
+
+
+
+
+=item *
+
+C<alpn> (C<0x01>)E<mdash>
+upper layer protocol used over the connection
+
+
+
+=item *
+
+C<authority> (C<0x02>)E<mdash>
+host name value passed by the client
+
+
+
+=item *
+
+C<unique_id> (C<0x05>)E<mdash>
+unique connection id
+
+
+
+=item *
+
+C<netns> (C<0x30>)E<mdash>
+name of the namespace
+
+
+
+=item *
+
+C<ssl> (C<0x20>)E<mdash>
+binary SSL TLV structure
+
+
+
+=back
+
+
+
+
+
+
+
+The following SSL TLV type names are supported:
+
+=over
+
+
+
+
+=item *
+
+C<ssl_version> (C<0x21>)E<mdash>
+SSL version used in client connection
+
+
+
+=item *
+
+C<ssl_cn> (C<0x22>)E<mdash>
+SSL certificate Common Name
+
+
+
+=item *
+
+C<ssl_cipher> (C<0x23>)E<mdash>
+name of the used cipher
+
+
+
+=item *
+
+C<ssl_sig_alg> (C<0x24>)E<mdash>
+algorithm used to sign the certificate
+
+
+
+=item *
+
+C<ssl_key_alg> (C<0x25>)E<mdash>
+public-key algorithm
+
+
+
+=back
+
+
+
+
+
+
+
+Also, the following special SSL TLV type name is supported:
+
+=over
+
+
+
+
+=item *
+
+C<ssl_verify>E<mdash>
+client SSL certificate verification result,
+zero if the client presented a certificate
+and it was successfully verified, and non-zero otherwise
+
+
+
+=back
+
+
+
+
+
 
 
 The PROXY protocol must be previously enabled by setting the

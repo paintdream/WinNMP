@@ -88,10 +88,42 @@ any configured limit will apply.
 
 
 
-The directives are inherited from the previous level if and
-only if there are no
-C<limit_conn>
-directives on the current level.
+These directives are inherited from the previous configuration level
+if and only if there are no C<limit_conn> directives
+defined on the current level.
+
+
+
+
+
+
+
+=head2 limit_conn_dry_run
+
+
+B<syntax:> limit_conn_dry_run I<C<on> E<verbar> C<off>>
+
+
+B<default:> I<off>
+
+
+B<context:> I<stream>
+
+
+B<context:> I<server>
+
+
+
+This directive appeared in version 1.17.6.
+
+
+
+
+
+Enables the dry run mode.
+In this mode, the number of connections is not limited, however,
+in the shared memory zone, the number of excessive connections is accounted
+as usual.
 
 
 
@@ -168,6 +200,51 @@ or about 16 thousand 64-byte states.
 If the zone storage is exhausted, the server will close the connection.
 
 
+
+
+
+
+B<NOTE>
+
+Additionally, as part of our
+commercial subscription,
+the
+L<status information|ngx_http_api_module>
+for each such shared memory zone can be
+L<obtained|ngx_http_api_module> or
+L<reset|ngx_http_api_module>
+with the L<API|ngx_http_api_module> since 1.17.7.
+
+
+
+
+
+
+
+
+=head1 Embedded Variables
+
+
+
+
+=over
+
+
+
+=item C<$limit_conn_status>
+
+
+
+
+keeps the result of limiting the number of connections (1.17.6):
+C<PASSED>,
+C<REJECTED>, or
+C<REJECTED_DRY_RUN>
+
+
+
+
+=back
 
 
 

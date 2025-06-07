@@ -119,7 +119,7 @@ whose value will be used to replace the client address.
 The request header field value that contains an optional port
 is also used to replace the client port (1.11.0).
 The address and port should be specified according to
-L<RFC 3986|https://tools.ietf.org/html/rfc3986>.
+L<RFC 3986|https://datatracker.ietf.org/doc/html/rfc3986>.
 
 
 

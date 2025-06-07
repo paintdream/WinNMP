@@ -204,95 +204,6 @@ analysis using a system debugger.
 
 
 
-=head2 error_log
-
-
-B<syntax:> error_log I<I<C<file>> [I<C<level>>]>
-
-
-B<default:> I<logsE<sol>error.log error>
-
-
-B<context:> I<main>
-
-
-B<context:> I<http>
-
-
-B<context:> I<mail>
-
-
-B<context:> I<stream>
-
-
-B<context:> I<server>
-
-
-B<context:> I<location>
-
-
-
-
-
-Configures logging.
-Several logs can be specified on the same level (1.5.2).
-If on the C<main> configuration level writing a log to a file
-is not explicitly defined, the default file will be used.
-
-
-
-
-
-The first parameter defines a I<C<file>> that will store the log.
-The special value C<stderr> selects the standard error file.
-Logging to L<syslog|syslog> can be configured by specifying
-the “C<syslog:>” prefix.
-Logging to a
-L<cyclic memory buffer|debugging_log>
-can be configured by specifying the “C<memory:>” prefix and
-buffer I<C<size>>, and is generally used for debugging (1.7.11).
-
-
-
-
-
-The second parameter determines the I<C<level>> of logging,
-and can be one of the following:
-C<debug>, C<info>, C<notice>,
-C<warn>, C<error>, C<crit>,
-C<alert>, or C<emerg>.
-Log levels above are listed in the order of increasing severity.
-Setting a certain log level will cause all messages of
-the specified and more severe log levels to be logged.
-For example, the default level C<error> will
-cause C<error>, C<crit>,
-C<alert>, and C<emerg> messages
-to be logged.
-If this parameter is omitted then C<error> is used.
-
-B<NOTE>
-
-For C<debug> logging to work, nginx needs to
-be built with C<--with-debug>,
-see “L<debugging_log>”.
-
-
-
-B<NOTE>
-
-The directive can be specified on the
-C<stream> level
-starting from version 1.7.11,
-and on the C<mail> level
-starting from version 1.9.0.
-
-
-
-
-
-
-
-
 =head2 env
 
 
@@ -380,6 +291,95 @@ B<NOTE>
 
 The NGINX environment variable is used internally by nginx
 and should not be set directly by the user.
+
+
+
+
+
+
+
+
+=head2 error_log
+
+
+B<syntax:> error_log I<I<C<file>> [I<C<level>>]>
+
+
+B<default:> I<logsE<sol>error.log error>
+
+
+B<context:> I<main>
+
+
+B<context:> I<http>
+
+
+B<context:> I<mail>
+
+
+B<context:> I<stream>
+
+
+B<context:> I<server>
+
+
+B<context:> I<location>
+
+
+
+
+
+Configures logging.
+Several logs can be specified on the same configuration level (1.5.2).
+If on the C<main> configuration level writing a log to a file
+is not explicitly defined, the default file will be used.
+
+
+
+
+
+The first parameter defines a I<C<file>> that will store the log.
+The special value C<stderr> selects the standard error file.
+Logging to L<syslog|syslog> can be configured by specifying
+the “C<syslog:>” prefix.
+Logging to a
+L<cyclic memory buffer|debugging_log>
+can be configured by specifying the “C<memory:>” prefix and
+buffer I<C<size>>, and is generally used for debugging (1.7.11).
+
+
+
+
+
+The second parameter determines the I<C<level>> of logging,
+and can be one of the following:
+C<debug>, C<info>, C<notice>,
+C<warn>, C<error>, C<crit>,
+C<alert>, or C<emerg>.
+Log levels above are listed in the order of increasing severity.
+Setting a certain log level will cause all messages of
+the specified and more severe log levels to be logged.
+For example, the default level C<error> will
+cause C<error>, C<crit>,
+C<alert>, and C<emerg> messages
+to be logged.
+If this parameter is omitted then C<error> is used.
+
+B<NOTE>
+
+For C<debug> logging to work, nginx needs to
+be built with C<--with-debug>,
+see “L<debugging_log>”.
+
+
+
+B<NOTE>
+
+The directive can be specified on the
+C<stream> level
+starting from version 1.7.11,
+and on the C<mail> level
+starting from version 1.9.0.
 
 
 
@@ -614,7 +614,7 @@ C<--with-pcre-jit> configuration parameter.
 B<syntax:> pid I<I<C<file>>>
 
 
-B<default:> I<nginx.pid>
+B<default:> I<logsE<sol>nginx.pid>
 
 
 B<context:> I<main>
@@ -651,6 +651,87 @@ Defines the name of the hardware SSL accelerator.
 
 
 
+B<NOTE>
+
+The module may be dynamically loaded by OpenSSL during configuration testing.
+
+
+
+
+
+
+
+
+=head2 ssl_object_cache_inheritable
+
+
+B<syntax:> ssl_object_cache_inheritable I<C<on> E<verbar> C<off>>
+
+
+B<default:> I<on>
+
+
+B<context:> I<main>
+
+
+
+This directive appeared in version 1.27.4.
+
+
+
+
+
+If enabled, SSL objects
+(SSL certificates, secret keys, trusted CA certificates, CRL lists)
+will be inherited across configuration reloads.
+
+
+
+
+
+SSL objects loaded from a file are inherited
+if the modification time and file index has not been changed
+since the previous configuration load.
+Secret keys specified as
+C<engine:name:id> are never inherited.
+Secret keys specified as
+C<data:value> are always inherited.
+
+
+
+
+
+
+B<NOTE>
+
+SSL objects loaded from variables cannot be inherited.
+
+
+
+
+
+
+Example:
+
+    
+    ssl_object_cache_inheritable on;
+    
+    http {
+        ...
+        server {
+            ...
+            ssl_certificate     example.com.crt;
+            ssl_certificate_key example.com.key;
+        }
+    }
+
+
+
+
+
+
+
+
 
 =head2 thread_pool
 
@@ -674,7 +755,7 @@ This directive appeared in version 1.7.11.
 
 
 
-Defines named thread pools
+Defines the I<C<name>> and parameters of a thread pool
 used for multi-threaded reading and sending of files
 L<without blocking|ngx_http_core_module>
 worker processes.

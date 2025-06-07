@@ -52,7 +52,8 @@ The limitation is done using the “leaky bucket” method.
 B<syntax:> limit_req I<
     C<zone>=I<C<name>>
     [C<burst>=I<C<number>>]
-    [C<nodelay>]>
+    [C<nodelay> E<verbar>
+     C<delay>=I<C<number>>]>
 
 
 
@@ -108,6 +109,14 @@ desired, the parameter C<nodelay> should be used:
 
 
 
+The C<delay> parameter (1.15.7) specifies a limit
+at which excessive requests become delayed.
+Default value is zero, i.e. all excessive requests are delayed.
+
+
+
+
+
 There could be several C<limit_req> directives.
 For example, the following configuration will limit the processing rate
 of requests coming from a single IP address and, at the same time,
@@ -130,10 +139,45 @@ the request processing rate by the virtual server:
 
 
 
-These directives are inherited from the previous level if and
-only if there are no
-C<limit_req>
-directives on the current level.
+These directives are inherited from the previous configuration level
+if and only if there are no C<limit_req> directives
+defined on the current level.
+
+
+
+
+
+
+
+=head2 limit_req_dry_run
+
+
+B<syntax:> limit_req_dry_run I<C<on> E<verbar> C<off>>
+
+
+B<default:> I<off>
+
+
+B<context:> I<http>
+
+
+B<context:> I<server>
+
+
+B<context:> I<location>
+
+
+
+This directive appeared in version 1.17.1.
+
+
+
+
+
+Enables the dry run mode.
+In this mode, requests processing rate is not limited, however,
+in the shared memory zone, the number of excessive requests is accounted
+as usual.
 
 
 
@@ -223,7 +267,8 @@ Sets the status code to return in response to rejected requests.
 B<syntax:> limit_req_zone I<
     I<C<key>>
     C<zone>=I<C<name>>:I<C<size>>
-    C<rate>=I<C<rate>>>
+    C<rate>=I<C<rate>>
+    [C<sync>]>
 
 
 
@@ -277,7 +322,7 @@ or about 8 thousand 128-byte states.
 
 
 If the zone storage is exhausted, the least recently used state is removed.
-Even if after that a new state cannot be created, the request is terminated with
+If even after that a new state cannot be created, the request is terminated with
 an error.
 
 
@@ -289,6 +334,68 @@ If a rate of less than one request per second is desired,
 it is specified in request per minute (rE<sol>m).
 For example, half-request per second is 30rE<sol>m.
 
+
+
+
+
+The C<sync> parameter (1.15.3) enables
+L<synchronization|ngx_stream_zone_sync_module>
+of the shared memory zone.
+
+B<NOTE>
+
+The C<sync> parameter is available as part of our
+commercial subscription.
+
+
+
+
+
+
+
+B<NOTE>
+
+Additionally, as part of our
+commercial subscription,
+the
+L<status information|ngx_http_api_module>
+for each such shared memory zone can be
+L<obtained|ngx_http_api_module> or
+L<reset|ngx_http_api_module>
+with the L<API|ngx_http_api_module> since 1.17.7.
+
+
+
+
+
+
+
+
+=head1 Embedded Variables
+
+
+
+
+=over
+
+
+
+=item C<$limit_req_status>
+
+
+
+
+keeps the result of limiting the request processing rate (1.17.6):
+C<PASSED>,
+C<DELAYED>,
+C<REJECTED>,
+C<DELAYED_DRY_RUN>, or
+C<REJECTED_DRY_RUN>
+
+
+
+
+=back
 
 
 

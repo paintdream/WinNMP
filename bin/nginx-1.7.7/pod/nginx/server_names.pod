@@ -368,6 +368,128 @@ in the L<ngx_http_core_module> directive:
 
 
 
+=head1 Virtual server selection
+
+
+
+First, a connection is created in a default server context.
+Then, the server name can be determined
+in the following request processing stages,
+each involved in server configuration selection:
+
+
+=over
+
+
+
+
+=item *
+
+
+
+during SSL handshake, in advance, according to
+L<SNI|configuring_https_servers>
+
+
+
+
+
+=item *
+
+
+
+after processing the request line
+
+
+
+
+
+=item *
+
+
+
+after processing the C<Host> header field
+
+
+
+
+
+=item *
+
+
+
+if the server name was not determined after processing the request line or
+from the C<Host> header field,
+nginx will use the empty name as the server name.
+
+
+
+
+
+=back
+
+
+
+At each of these stages, different server configurations can be applied.
+As such, certain directives should be specified with caution:
+
+=over
+
+
+
+
+=item *
+
+in case of the
+L<ngx_http_ssl_module> directive,
+the protocol list is set by the OpenSSL library before
+the server configuration could be applied according to the name
+requested through SNI,
+thus, protocols should be specified only for a default server;
+
+
+
+=item *
+
+the
+L<ngx_http_core_module>
+and
+L<ngx_http_core_module> directives
+are involved before reading the request line,
+thus, such directives use a default server configuration or
+the server configuration chosen by SNI;
+
+
+
+=item *
+
+in case of the
+L<ngx_http_core_module>,
+L<ngx_http_core_module>,
+and
+L<ngx_http_core_module> directives
+involved in processing request header fields,
+it additionally depends
+whether the server configuration was updated
+according to the request line or the C<Host> header field;
+
+
+
+=item *
+
+an error response will be handled with
+the L<ngx_http_core_module> directive
+in the server that currently fulfills the request.
+
+
+
+=back
+
+
+
+
+
+
 =head1 Optimization
 
 

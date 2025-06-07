@@ -20,7 +20,7 @@ or F<.m4a> filename extensions.
 
 
 
-Pseudo-streaming works in alliance with a compatible Flash player.
+Pseudo-streaming works in alliance with a compatible media player.
 The player sends an HTTP request to the server with the start time
 specified in the query string argument (named simply
 C<start>
@@ -62,7 +62,7 @@ nginx must read the entire file and prepare a new stream so that
 the metadata come before the media data.
 This involves some CPU, memory, and disk IE<sol>O overhead,
 so it is a good idea to
-L<prepare an original file for pseudo-streaming|http://flowplayer.org/plugins/streaming/pseudostreaming.html#prepare> in advance,
+L<prepare an original file for pseudo-streaming|https://github.com/flowplayer/flowplayer/wiki/7.1.1-video-file-correction> in advance,
 rather than having nginx do this on every such request.
 
 
@@ -89,6 +89,20 @@ C<start> or C<end>
 argument, nginx will read the metadata from the file, prepare the
 stream with the requested time range, and send it to the client.
 This has the same overhead as described above.
+
+
+
+
+
+If the C<start> argument points to
+a non-key video frame,
+the beginning of such video will be broken.
+To fix this issue, the video
+can be prepended with
+the key frame before C<start> point
+and with all intermediate frames between them.
+These frames will be hidden from playback
+using an edit list (1.21.4).
 
 
 
@@ -320,6 +334,44 @@ B<NOTE>
 This directive is available as part of our
 commercial subscription.
 
+
+
+
+
+
+
+
+=head2 mp4_start_key_frame
+
+
+B<syntax:> mp4_start_key_frame I<C<on> E<verbar> C<off>>
+
+
+B<default:> I<off>
+
+
+B<context:> I<http>
+
+
+B<context:> I<server>
+
+
+B<context:> I<location>
+
+
+
+This directive appeared in version 1.21.4.
+
+
+
+
+
+Forces output video to always start with a key video frame.
+If the C<start> argument does not point to a key frame,
+initial frames are hidden using an mp4 edit list.
+Edit lists are supported by major players and browsers such as
+Chrome, Safari, QuickTime and ffmpeg,
+partially supported by Firefox.
 
 
 

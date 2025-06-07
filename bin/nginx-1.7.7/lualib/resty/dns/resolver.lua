@@ -58,7 +58,7 @@ local SECTION_AR  = 3
 
 
 local _M = {
-    _VERSION    = '0.21',
+    _VERSION    = '0.22',
     TYPE_A      = TYPE_A,
     TYPE_NS     = TYPE_NS,
     TYPE_CNAME  = TYPE_CNAME,
@@ -97,6 +97,29 @@ end
 
 for i = 2, 64, 2 do
     arpa_tmpl[i] = DOT_CHAR
+end
+
+
+local function udp_socks_close(self)
+    if self.socks == nil then
+        return
+    end
+
+    for _, sock in ipairs(self.socks) do
+        sock:close()
+    end
+
+    self.socks = nil
+end
+
+
+local function tcp_socks_close(self)
+    if self.tcp_sock == nil then
+        return
+    end
+
+    self.tcp_sock:close()
+    self.tcp_sock = nil
 end
 
 
@@ -152,12 +175,23 @@ function _M.new(class, opts)
     tcp_sock:settimeout(timeout)
 
     return setmetatable(
-                { cur = rand(1, n), socks = socks,
+                { cur = opts.no_random and 1 or rand(1, n),
+                  socks = socks,
                   tcp_sock = tcp_sock,
                   servers = servers,
                   retrans = opts.retrans or 5,
                   no_recurse = opts.no_recurse,
                 }, mt)
+end
+
+
+function _M:destroy()
+    udp_socks_close(self)
+    tcp_socks_close(self)
+    self.cur = nil
+    self.servers = nil
+    self.retrans = nil
+    self.no_recurse = nil
 end
 
 

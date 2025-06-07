@@ -39,10 +39,9 @@ Supported methods are:
 
 
 
-L<USERE<sol>PASS|https://tools.ietf.org/html/rfc1939>,
-L<AUTH PLAIN|https://tools.ietf.org/html/rfc4616>,
-L<AUTH LOGIN|https://tools.ietf.org/html/draft-murchison-sasl-login-00>.
-It is not possible to disable these methods.
+L<USERE<sol>PASS|https://datatracker.ietf.org/doc/html/rfc1939>,
+L<AUTH PLAIN|https://datatracker.ietf.org/doc/html/rfc4616>,
+L<AUTH LOGIN|https://datatracker.ietf.org/doc/html/draft-murchison-sasl-login-00>
 
 
 
@@ -51,7 +50,7 @@ It is not possible to disable these methods.
 
 
 
-L<APOP|https://tools.ietf.org/html/rfc1939>.
+L<APOP|https://datatracker.ietf.org/doc/html/rfc1939>.
 In order for this method to work, the password must be stored unencrypted.
 
 
@@ -61,7 +60,7 @@ In order for this method to work, the password must be stored unencrypted.
 
 
 
-L<AUTH CRAM-MD5|https://tools.ietf.org/html/rfc2195>.
+L<AUTH CRAM-MD5|https://datatracker.ietf.org/doc/html/rfc2195>.
 In order for this method to work, the password must be stored unencrypted.
 
 
@@ -71,7 +70,7 @@ In order for this method to work, the password must be stored unencrypted.
 
 
 
-L<AUTH EXTERNAL|https://tools.ietf.org/html/rfc4422> (1.11.6).
+L<AUTH EXTERNAL|https://datatracker.ietf.org/doc/html/rfc4422> (1.11.6).
 
 
 
@@ -79,6 +78,17 @@ L<AUTH EXTERNAL|https://tools.ietf.org/html/rfc4422> (1.11.6).
 =back
 
 
+
+
+
+
+
+Plain text authentication methods
+(C<USERE<sol>PASS>, C<AUTH PLAIN>,
+and C<AUTH LOGIN>) are always enabled,
+though if the C<plain> method is not specified,
+C<AUTH PLAIN> and C<AUTH LOGIN>
+will not be automatically included in L</pop3_capabilities>.
 
 
 
@@ -105,12 +115,12 @@ B<context:> I<server>
 
 
 Sets the
-L<POP3 protocol|https://tools.ietf.org/html/rfc2449>
+L<POP3 protocol|https://datatracker.ietf.org/doc/html/rfc2449>
 extensions list that is passed to the client in response to
 the C<CAPA> command.
 The authentication methods specified in the L</pop3_auth> directive
-(L<SASL|https://tools.ietf.org/html/rfc2449> extension) and
-L<STLS|https://tools.ietf.org/html/rfc2595>
+(L<SASL|https://datatracker.ietf.org/doc/html/rfc2449> extension) and
+L<STLS|https://datatracker.ietf.org/doc/html/rfc2595>
 are automatically added to this list depending on the
 L<ngx_mail_ssl_module> directive value.
 

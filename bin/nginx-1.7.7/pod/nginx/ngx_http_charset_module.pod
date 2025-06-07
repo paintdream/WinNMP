@@ -136,8 +136,9 @@ This capability can be disabled using the
 L<ngx_http_proxy_module>,
 L<ngx_http_fastcgi_module>,
 L<ngx_http_uwsgi_module>,
+L<ngx_http_scgi_module>,
 and
-L<ngx_http_scgi_module>
+L<ngx_http_grpc_module>
 directives.
 
 
@@ -289,7 +290,7 @@ B<context:> I<if in location>
 
 
 Determines whether a conversion should be performed for answers
-received from a proxied or a FastCGIE<sol>uwsgiE<sol>SCGI server
+received from a proxied or a FastCGIE<sol>uwsgiE<sol>SCGIE<sol>gRPC server
 when the answers already carry a charset in the C<Content-Type>
 response header field.
 If conversion is enabled, a charset specified in the received

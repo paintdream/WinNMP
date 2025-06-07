@@ -84,9 +84,12 @@ for example, from a real IP address of a client:
 
 
 In order for this parameter to work,
-it is necessary to run nginx worker processes with the
-L<superuser|ngx_core_module> privileges
-and configure kernel routing table
+it is usually necessary to run nginx worker processes with the
+L<superuser|ngx_core_module> privileges.
+On Linux it is not required (1.13.8) as if
+the C<transparent> parameter is specified, worker processes
+inherit the C<CAP_NET_RAW> capability from the master process.
+It is also necessary to configure kernel routing table
 to intercept network traffic from the proxied server.
 
 
@@ -674,6 +677,7 @@ B<syntax:> proxy_cache_path I<
     C<keys_zone>=I<C<name>>:I<C<size>>
     [C<inactive>=I<C<time>>]
     [C<max_size>=I<C<size>>]
+    [C<min_free>=I<C<size>>]
     [C<manager_files>=I<C<number>>]
     [C<manager_sleep>=I<C<time>>]
     [C<manager_threshold>=I<C<time>>]
@@ -768,8 +772,12 @@ By default, C<inactive> is set to 10 minutes.
 
 
 The special “cache manager” process monitors the maximum cache size set
-by the C<max_size> parameter.
-When this size is exceeded, it removes the least recently used data.
+by the C<max_size> parameter,
+and the minimum amount of free space set
+by the C<min_free> (1.19.1) parameter
+on the file system with cache.
+When the size is exceeded or there is not enough free space,
+it removes the least recently used data.
 The data is removed in iterations configured by
 C<manager_files>,
 C<manager_threshold>, and
@@ -1079,7 +1087,7 @@ This has lower priority than using the directive parameters.
 =item *
 
 The
-“L<stale-while-revalidate|https://tools.ietf.org/html/rfc5861#section-3>”
+“L<stale-while-revalidate|https://datatracker.ietf.org/doc/html/rfc5861#section-3>”
 extension of the C<Cache-Control> header field permits
 using a stale cached response if it is currently being updated.
 
@@ -1088,7 +1096,7 @@ using a stale cached response if it is currently being updated.
 =item *
 
 The
-“L<stale-if-error|https://tools.ietf.org/html/rfc5861#section-4>”
+“L<stale-if-error|https://datatracker.ietf.org/doc/html/rfc5861#section-4>”
 extension of the C<Cache-Control> header field permits
 using a stale cached response in case of an error.
 
@@ -1342,27 +1350,111 @@ and I<C<replacement>> can reference them:
 
 
 
-There could be several C<proxy_cookie_domain> directives:
+Several C<proxy_cookie_domain> directives
+can be specified on the same level:
 
     
     proxy_cookie_domain localhost example.org;
     proxy_cookie_domain ~\.([a-z]+\.[a-z]+)$ $1;
 
 
+If several directives can be applied to the cookie,
+the first matching directive will be chosen.
 
 
 
 
 
-The C<off> parameter cancels the effect of all
-C<proxy_cookie_domain> directives on the current level:
+The C<off> parameter cancels the effect
+of the C<proxy_cookie_domain> directives
+inherited from the previous configuration level.
+
+
+
+
+
+
+
+=head2 proxy_cookie_flags
+
+
+B<syntax:> proxy_cookie_flags I<
+    C<off> E<verbar>
+    I<C<cookie>>
+    [I<C<flag>> ...]>
+
+
+B<default:> I<off>
+
+
+B<context:> I<http>
+
+
+B<context:> I<server>
+
+
+B<context:> I<location>
+
+
+
+This directive appeared in version 1.19.3.
+
+
+
+
+
+Sets one or more flags for the cookie.
+The I<C<cookie>> can contain text, variables, and their combinations.
+The I<C<flag>>
+can contain text, variables, and their combinations (1.19.8).
+The
+C<secure>,
+C<httponly>,
+C<samesite=strict>,
+C<samesite=lax>,
+C<samesite=none>
+parameters add the corresponding flags.
+The
+C<nosecure>,
+C<nohttponly>,
+C<nosamesite>
+parameters remove the corresponding flags.
+
+
+
+
+
+The cookie can also be specified using regular expressions.
+In this case, I<C<cookie>> should start from
+the “C<~>” symbol.
+
+
+
+
+
+Several C<proxy_cookie_flags> directives
+can be specified on the same configuration level:
 
     
-    proxy_cookie_domain off;
-    proxy_cookie_domain localhost example.org;
-    proxy_cookie_domain www.example.org example.org;
+    proxy_cookie_flags one httponly;
+    proxy_cookie_flags ~ nosecure samesite=strict;
 
 
+If several directives can be applied to the cookie,
+the first matching directive will be chosen.
+In the example, the C<httponly> flag
+is added to the cookie C<one>,
+for all other cookies
+the C<samesite=strict> flag is added and
+the C<secure> flag is deleted.
+
+
+
+
+
+The C<off> parameter cancels the effect
+of the C<proxy_cookie_flags> directives
+inherited from the previous configuration level.
 
 
 
@@ -1446,27 +1538,24 @@ and I<C<replacement>> can reference them:
 
 
 
-There could be several C<proxy_cookie_path> directives:
+Several C<proxy_cookie_path> directives
+can be specified on the same level:
 
     
     proxy_cookie_path /one/ /;
     proxy_cookie_path / /two/;
 
 
+If several directives can be applied to the cookie,
+the first matching directive will be chosen.
 
 
 
 
 
-The C<off> parameter cancels the effect of all
-C<proxy_cookie_path> directives on the current level:
-
-    
-    proxy_cookie_path off;
-    proxy_cookie_path /two/ /;
-    proxy_cookie_path ~*^/user/([^/]+) /u/$1;
-
-
+The C<off> parameter cancels the effect
+of the C<proxy_cookie_path> directives
+inherited from the previous configuration level.
 
 
 
@@ -1834,6 +1923,7 @@ the overall rate will be twice as much as the specified limit.
 The limitation works only if
 buffering of responses from the proxied
 server is enabled.
+Parameter value can contain variables (1.27.0).
 
 
 
@@ -2040,7 +2130,7 @@ a server returned a response with the code 429 (1.11.13);
 
 
 normally, requests with a
-L<non-idempotent|https://tools.ietf.org/html/rfc7231#section-4.2.2>
+L<non-idempotent|https://datatracker.ietf.org/doc/html/rfc7231#section-4.2.2>
 method
 (C<POST>, C<LOCK>, C<PATCH>)
 are not passed to the next server
@@ -2513,6 +2603,63 @@ L</proxy_pass_request_body> directives.
 
 
 
+=head2 proxy_pass_trailers
+
+
+B<syntax:> proxy_pass_trailers I<C<on> E<verbar> C<off>>
+
+
+B<default:> I<off>
+
+
+B<context:> I<http>
+
+
+B<context:> I<server>
+
+
+B<context:> I<location>
+
+
+
+This directive appeared in version 1.27.2.
+
+
+
+
+
+Permits passing trailer fields from a proxied server to a client.
+
+
+
+
+
+
+B<NOTE>
+
+A trailer section in HTTPE<sol>1.1 is
+L<explicitly
+enabled|https://datatracker.ietf.org/doc/html/rfc9110#section-6.5.1>.
+
+
+    
+    location / {
+        proxy_http_version 1.1;
+        proxy_set_header Connection "te";
+        proxy_set_header TE "trailers";
+        proxy_pass_trailers on;
+    
+        proxy_pass ...
+    }
+
+
+
+
+
+
+
+
+
 =head2 proxy_read_timeout
 
 
@@ -2670,7 +2817,8 @@ and I<C<replacement>> can reference them:
 
 
 
-There could be several C<proxy_redirect> directives:
+Several C<proxy_redirect> directives
+can be specified on the same level:
 
     
     proxy_redirect default;
@@ -2678,21 +2826,17 @@ There could be several C<proxy_redirect> directives:
     proxy_redirect http://www.example.com/ /;
 
 
+If several directives can be applied to
+the header fields of a proxied server response,
+the first matching directive will be chosen.
 
 
 
 
 
-The C<off> parameter cancels the effect of all
-C<proxy_redirect> directives on the current level:
-
-    
-    proxy_redirect off;
-    proxy_redirect default;
-    proxy_redirect http://localhost:8000/  /;
-    proxy_redirect http://www.example.com/ /;
-
-
+The C<off> parameter cancels the effect
+of the C<proxy_redirect> directives
+inherited from the previous configuration level.
 
 
 
@@ -2901,10 +3045,9 @@ B<context:> I<location>
 Allows redefining or appending fields to the request header
 passed to the proxied server.
 The I<C<value>> can contain text, variables, and their combinations.
-These directives are inherited from the previous level if and
-only if there are no
-C<proxy_set_header>
-directives defined on the current level.
+These directives are inherited from the previous configuration level
+if and only if there are no C<proxy_set_header> directives
+defined on the current level.
 By default, only two fields are redefined:
 
     
@@ -2978,6 +3121,43 @@ field will not be passed to a proxied server:
 
 
 
+=head2 proxy_socket_keepalive
+
+
+B<syntax:> proxy_socket_keepalive I<C<on> E<verbar> C<off>>
+
+
+B<default:> I<off>
+
+
+B<context:> I<http>
+
+
+B<context:> I<server>
+
+
+B<context:> I<location>
+
+
+
+This directive appeared in version 1.15.6.
+
+
+
+
+
+Configures the “TCP keepalive” behavior
+for outgoing connections to a proxied server.
+By default, the operating system’s settings are in effect for the socket.
+If the directive is set to the value “C<on>”, the
+C<SO_KEEPALIVE> socket option is turned on for the socket.
+
+
+
+
+
+
+
 =head2 proxy_ssl_certificate
 
 
@@ -3003,6 +3183,133 @@ This directive appeared in version 1.7.8.
 
 Specifies a I<C<file>> with the certificate in the PEM format
 used for authentication to a proxied HTTPS server.
+
+
+
+
+
+Since version 1.21.0, variables can be used in the I<C<file>> name.
+
+
+
+
+
+
+
+=head2 proxy_ssl_certificate_cache
+
+
+B<syntax:> proxy_ssl_certificate_cache I<C<off>>
+
+
+B<syntax:> proxy_ssl_certificate_cache I<
+    C<max>=I<C<N>>
+    [C<inactive>=I<C<time>>]
+    [C<valid>=I<C<time>>]>
+
+
+B<default:> I<off>
+
+
+B<context:> I<http>
+
+
+B<context:> I<server>
+
+
+B<context:> I<location>
+
+
+
+This directive appeared in version 1.27.4.
+
+
+
+
+
+Defines a cache that stores
+SSL certificates and
+secret keys
+specified with variables.
+
+
+
+
+
+The directive has the following parameters:
+
+=over
+
+
+
+=item 
+C<max>
+
+
+
+
+
+sets the maximum number of elements in the cache;
+on cache overflow the least recently used (LRU) elements are removed;
+
+
+
+=item 
+C<inactive>
+
+
+
+
+
+defines a time after which an element is removed from the cache
+if it has not been accessed during this time;
+by default, it is 10 seconds;
+
+
+
+=item 
+C<valid>
+
+
+
+
+
+defines a time during which
+an element in the cache is considered valid
+and can be reused;
+by default, it is 60 seconds.
+Certificates that exceed this time will be reloaded or revalidated;
+
+
+
+=item 
+C<off>
+
+
+
+
+
+disables the cache.
+
+
+
+
+=back
+
+
+
+
+
+
+
+Example:
+
+    
+    proxy_ssl_certificate       $proxy_ssl_server_name.crt;
+    proxy_ssl_certificate_key   $proxy_ssl_server_name.key;
+    proxy_ssl_certificate_cache max=1000 inactive=20s valid=1m;
+
+
 
 
 
@@ -3045,6 +3352,12 @@ C<engine>:I<C<name>>:I<C<id>>
 can be specified instead of the I<C<file>> (1.7.9),
 which loads a secret key with a specified I<C<id>>
 from the OpenSSL engine I<C<name>>.
+
+
+
+
+
+Since version 1.21.0, variables can be used in the I<C<file>> name.
 
 
 
@@ -3093,6 +3406,66 @@ The full list can be viewed using the
 
 
 
+=head2 proxy_ssl_conf_command
+
+
+B<syntax:> proxy_ssl_conf_command I<I<C<name>> I<C<value>>>
+
+
+
+B<context:> I<http>
+
+
+B<context:> I<server>
+
+
+B<context:> I<location>
+
+
+
+This directive appeared in version 1.19.4.
+
+
+
+
+
+Sets arbitrary OpenSSL configuration
+L<commands|https://www.openssl.org/docs/man1.1.1/man3/SSL_CONF_cmd.html>
+when establishing a connection with the proxied HTTPS server.
+
+B<NOTE>
+
+The directive is supported when using OpenSSL 1.0.2 or higher.
+
+
+
+
+
+
+Several C<proxy_ssl_conf_command> directives
+can be specified on the same level.
+These directives are inherited from the previous configuration level
+if and only if there are
+no C<proxy_ssl_conf_command> directives
+defined on the current level.
+
+
+
+
+
+
+B<NOTE>
+
+Note that configuring OpenSSL directly
+might result in unexpected behavior.
+
+
+
+
+
+
+
+
 =head2 proxy_ssl_crl
 
 
@@ -3119,6 +3492,52 @@ This directive appeared in version 1.7.0.
 Specifies a I<C<file>> with revoked certificates (CRL)
 in the PEM format used to verify
 the certificate of the proxied HTTPS server.
+
+
+
+
+
+
+
+=head2 proxy_ssl_key_log
+
+
+B<syntax:> proxy_ssl_key_log I<path>
+
+
+
+B<context:> I<http>
+
+
+B<context:> I<server>
+
+
+B<context:> I<location>
+
+
+
+This directive appeared in version 1.27.2.
+
+
+
+
+
+Enables logging of proxied HTTPS server connection SSL keys
+and specifies the path to the key log file.
+Keys are logged in the
+L<SSLKEYLOGFILE|https://datatracker.ietf.org/doc/html/draft-ietf-tls-keylogfile>
+format compatible with Wireshark.
+
+
+
+
+
+
+B<NOTE>
+
+This directive is available as part of our
+commercial subscription.
+
 
 
 
@@ -3203,6 +3622,56 @@ Passphrases are tried in turn when loading the key.
 
 
 
+=head2 proxy_ssl_protocols
+
+
+B<syntax:> proxy_ssl_protocols I<
+    [C<SSLv2>]
+    [C<SSLv3>]
+    [C<TLSv1>]
+    [C<TLSv1.1>]
+    [C<TLSv1.2>]
+    [C<TLSv1.3>]>
+
+
+B<default:> I<TLSv1.2 TLSv1.3>
+
+
+B<context:> I<http>
+
+
+B<context:> I<server>
+
+
+B<context:> I<location>
+
+
+
+This directive appeared in version 1.5.6.
+
+
+
+
+
+Enables the specified protocols for requests to a proxied HTTPS server.
+
+
+
+
+
+
+B<NOTE>
+
+The C<TLSv1.3> parameter is used by default
+since 1.23.4.
+
+
+
+
+
+
+
+
 =head2 proxy_ssl_server_name
 
 
@@ -3263,47 +3732,8 @@ B<context:> I<location>
 Determines whether SSL sessions can be reused when working with
 the proxied server.
 If the errors
-“C<SSL3_GET_FINISHED:digest check failed>”
+“C<digest check failed>”
 appear in the logs, try disabling session reuse.
-
-
-
-
-
-
-
-=head2 proxy_ssl_protocols
-
-
-B<syntax:> proxy_ssl_protocols I<
-    [C<SSLv2>]
-    [C<SSLv3>]
-    [C<TLSv1>]
-    [C<TLSv1.1>]
-    [C<TLSv1.2>]
-    [C<TLSv1.3>]>
-
-
-B<default:> I<TLSv1 TLSv1.1 TLSv1.2>
-
-
-B<context:> I<http>
-
-
-B<context:> I<server>
-
-
-B<context:> I<location>
-
-
-
-This directive appeared in version 1.5.6.
-
-
-
-
-
-Enables the specified protocols for requests to a proxied HTTPS server.
 
 
 

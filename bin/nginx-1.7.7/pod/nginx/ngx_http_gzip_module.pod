@@ -15,6 +15,12 @@ The C<ngx_http_gzip_module> module is a filter
 that compresses responses using the “gzip” method.
 This often helps to reduce the size of transmitted data by half or even more.
 
+B<NOTE>
+
+When using the SSLE<sol>TLS protocol, compressed responses may be subject to
+L<BREACH|https://en.wikipedia.org/wiki/BREACH> attacks.
+
+
 
 
 
@@ -185,6 +191,35 @@ is excluded from this mask.
 
 
 
+=head2 gzip_http_version
+
+
+B<syntax:> gzip_http_version I<C<1.0> E<verbar> C<1.1>>
+
+
+B<default:> I<1.1>
+
+
+B<context:> I<http>
+
+
+B<context:> I<server>
+
+
+B<context:> I<location>
+
+
+
+
+
+Sets the minimum HTTP version of a request required to compress a response.
+
+
+
+
+
+
+
 =head2 gzip_min_length
 
 
@@ -209,35 +244,6 @@ B<context:> I<location>
 Sets the minimum length of a response that will be gzipped.
 The length is determined only from the C<Content-Length>
 response header field.
-
-
-
-
-
-
-
-=head2 gzip_http_version
-
-
-B<syntax:> gzip_http_version I<C<1.0> E<verbar> C<1.1>>
-
-
-B<default:> I<1.1>
-
-
-B<context:> I<http>
-
-
-B<context:> I<server>
-
-
-B<context:> I<location>
-
-
-
-
-
-Sets the minimum HTTP version of a request required to compress a response.
 
 
 

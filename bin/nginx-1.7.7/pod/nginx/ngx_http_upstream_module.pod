@@ -16,8 +16,9 @@ is used to define groups of servers that can be referenced
 by the L<ngx_http_proxy_module>,
 L<ngx_http_fastcgi_module>,
 L<ngx_http_uwsgi_module>,
-L<ngx_http_scgi_module>, and
-L<ngx_http_memcached_module> directives.
+L<ngx_http_scgi_module>,
+L<ngx_http_memcached_module>, and
+L<ngx_http_grpc_module> directives.
 
 
 
@@ -231,8 +232,9 @@ What is considered an unsuccessful attempt is defined by the
 L<ngx_http_proxy_module>,
 L<ngx_http_fastcgi_module>,
 L<ngx_http_uwsgi_module>,
-L<ngx_http_scgi_module>, and
-L<ngx_http_memcached_module>
+L<ngx_http_scgi_module>,
+L<ngx_http_memcached_module>, and
+L<ngx_http_grpc_module>
 directives.
 
 
@@ -281,6 +283,13 @@ C<backup>
 marks the server as a backup server.
 It will be passed requests when the primary servers are unavailable.
 
+B<NOTE>
+
+The parameter cannot be used along with the
+L</hash>, L</ip_hash>, and L</random>
+load balancing methods.
+
+
 
 
 =item 
@@ -291,23 +300,6 @@ C<down>
 
 
 marks the server as permanently unavailable.
-
-
-
-
-=back
-
-
-
-
-
-
-
-Additionally,
-the following parameters are available as part of our
-commercial subscription:
-
-=over
 
 
 
@@ -326,36 +318,23 @@ The server group must reside in the shared memory.
 
 
 In order for this parameter to work,
-the L<ngx_http_core_module> directive
+the C<resolver> directive
 must be specified in the
-L<ngx_http_core_module> block.
-Example:
-
-    
-    http {
-        resolver 10.0.0.1;
-    
-        upstream u {
-            zone ...;
-            ...
-            server example.com resolve;
-        }
-    }
+L<http|ngx_http_core_module> block
+or in the corresponding upstream block.
 
 
 
 
 
 
+B<NOTE>
 
-=item 
-C<route>=I<C<string>>
-
-
-
+Prior to version 1.27.3, this parameter was available only as part of our
+commercial subscription.
 
 
-sets the server route name.
+
 
 
 
@@ -367,7 +346,7 @@ C<service>=I<C<name>>
 
 
 enables resolving of DNS
-L<SRV|https://tools.ietf.org/html/rfc2782>
+L<SRV|https://datatracker.ietf.org/doc/html/rfc2782>
 records and sets the service I<C<name>> (1.9.13).
 In order for this parameter to work, it is necessary to specify
 the L</resolve> parameter for the server
@@ -375,7 +354,7 @@ and specify a hostname without a port number.
 
 
 If the service name does not contain a dot (“C<.>”), then
-the L<RFC|https://tools.ietf.org/html/rfc2782>-compliant name
+the L<RFC|https://datatracker.ietf.org/doc/html/rfc2782>-compliant name
 is constructed
 and the TCP protocol is added to the service prefix.
 For example, to look up the
@@ -414,6 +393,45 @@ the rest of SRV records are ignored.
 
 
 
+
+B<NOTE>
+
+Prior to version 1.27.3, this parameter was available only as part of our
+commercial subscription.
+
+
+
+
+
+
+
+=back
+
+
+
+
+
+
+
+Additionally,
+the following parameters are available as part of our
+commercial subscription:
+
+=over
+
+
+
+=item 
+C<route>=I<C<string>>
+
+
+
+
+
+sets the server route name.
+
+
+
 =item 
 C<slow_start>=I<C<time>>
 
@@ -431,7 +449,28 @@ Default value is zero, i.e. slow start is disabled.
 B<NOTE>
 
 The parameter cannot be used along with the
-L</hash> and L</ip_hash> load balancing methods.
+L</hash>, L</ip_hash>, and L</random>
+load balancing methods.
+
+
+
+
+=item 
+C<drain>
+
+
+
+
+
+puts the server into the “draining” mode (1.13.6).
+In this mode, only requests bound to the server
+will be proxied to it.
+
+B<NOTE>
+
+Prior to version 1.13.6,
+the parameter could be changed only with the
+L<API|ngx_http_api_module> module.
 
 
 
@@ -491,9 +530,16 @@ as part of our commercial subscription,
 such groups allow changing the group membership
 or modifying the settings of a particular server
 without the need of restarting nginx.
-The configuration is accessible via a special location
+The configuration is accessible via the
+L<API|ngx_http_api_module> module (1.13.3).
+
+B<NOTE>
+
+Prior to version 1.13.3,
+the configuration was accessible only via a special location
 handled by
 L<ngx_http_upstream_conf_module>.
+
 
 
 
@@ -540,7 +586,7 @@ Examples:
 The state is currently limited to the list of servers with their parameters.
 The file is read when parsing the configuration and is updated each time
 the upstream configuration is
-L<changed|ngx_http_upstream_conf_module>.
+L<changed|ngx_http_api_module>.
 Changing the file content directly should be avoided.
 The directive cannot be used
 along with the L</server> directive.
@@ -598,22 +644,22 @@ The I<C<key>> can contain text, variables, and their combinations.
 Note that adding or removing a server from the group
 may result in remapping most of the keys to different servers.
 The method is compatible with the
-L<Cache::Memcached|http://search.cpan.org/perldoc?Cache%3A%3AMemcached>
+L<Cache::Memcached|https://metacpan.org/pod/Cache::Memcached>
 Perl library.
 
 
 
 
 
-If the C<consistent> parameter is specified
-the L<ketama|http://www.last.fm/user/RJ/journal/2007/04/10/392555/>
+If the C<consistent> parameter is specified,
+the L<ketama|https://www.metabrew.com/article/libketama-consistent-hashing-algo-memcached-clients>
 consistent hashing method will be used instead.
 The method ensures that only a few keys
 will be remapped to different servers
 when a server is added to or removed from the group.
 This helps to achieve a higher cache hit ratio for caching servers.
 The method is compatible with the
-L<Cache::Memcached::Fast|http://search.cpan.org/perldoc?Cache%3A%3AMemcached%3A%3AFast>
+L<Cache::Memcached::Fast|https://metacpan.org/pod/Cache::Memcached::Fast>
 Perl library with the I<C<ketama_points>> parameter set to 160.
 
 
@@ -729,6 +775,14 @@ to let upstream servers process new incoming connections as well.
 
 
 
+B<NOTE>
+
+When using load balancing methods other than the default
+round-robin method, it is necessary to activate them before
+the C<keepalive> directive.
+
+
+
 
 
 
@@ -828,16 +882,114 @@ for keepalive connections to work:
 
 B<NOTE>
 
-When using load balancer methods other than the default
-round-robin method, it is necessary to activate them before
-the C<keepalive> directive.
+SCGI and uwsgi protocols do not have a notion of keepalive connections.
+
+
+
+
+
+
+
+
+=head2 keepalive_requests
+
+
+B<syntax:> keepalive_requests I<I<C<number>>>
+
+
+B<default:> I<1000>
+
+
+B<context:> I<upstream>
+
+
+
+This directive appeared in version 1.15.3.
+
+
+
+
+
+Sets the maximum number of requests that can be
+served through one keepalive connection.
+After the maximum number of requests is made, the connection is closed.
+
+
+
+
+
+Closing connections periodically is necessary to free
+per-connection memory allocations.
+Therefore, using too high maximum number of requests
+could result in excessive memory usage and not recommended.
+
+
+
 
 
 
 B<NOTE>
 
-SCGI and uwsgi protocols do not have a notion of keepalive connections.
+Prior to version 1.19.10, the default value was 100.
 
+
+
+
+
+
+
+
+=head2 keepalive_time
+
+
+B<syntax:> keepalive_time I<I<C<time>>>
+
+
+B<default:> I<1h>
+
+
+B<context:> I<upstream>
+
+
+
+This directive appeared in version 1.19.10.
+
+
+
+
+
+Limits the maximum time during which
+requests can be processed through one keepalive connection.
+After this time is reached, the connection is closed
+following the subsequent request processing.
+
+
+
+
+
+
+
+=head2 keepalive_timeout
+
+
+B<syntax:> keepalive_timeout I<I<C<timeout>>>
+
+
+B<default:> I<60s>
+
+
+B<context:> I<upstream>
+
+
+
+This directive appeared in version 1.15.3.
+
+
+
+
+
+Sets a timeout during which an idle keepalive
+connection to an upstream server will stay open.
 
 
 
@@ -1082,6 +1234,198 @@ commercial subscription.
 
 
 
+=head2 random
+
+
+B<syntax:> random I<[C<two> [I<C<method>>]]>
+
+
+
+B<context:> I<upstream>
+
+
+
+This directive appeared in version 1.15.1.
+
+
+
+
+
+Specifies that a group should use a load balancing method where a request
+is passed to a randomly selected server, taking into account weights
+of servers.
+
+
+
+
+
+The optional C<two> parameter
+instructs nginx to randomly select
+L<two|https://homes.cs.washington.edu/~karlin/papers/balls.pdf>
+servers and then choose a server
+using the specified C<method>.
+The default method is C<least_conn>
+which passes a request to a server
+with the least number of active connections.
+
+
+
+
+
+The C<least_time> method passes a request to a server
+with the least average response time and least number of active connections.
+If C<least_time=header> is specified, the time to receive the
+response header is used.
+If C<least_time=last_byte> is specified, the time to receive the
+full response is used.
+
+B<NOTE>
+
+The C<least_time> method is available as a part of our
+commercial subscription.
+
+
+
+
+
+
+
+
+=head2 resolver
+
+
+B<syntax:> resolver I<
+    I<C<address>> ...
+    [C<valid>=I<C<time>>]
+    [C<ipv4>=C<on>E<verbar>C<off>]
+    [C<ipv6>=C<on>E<verbar>C<off>]
+    [C<status_zone>=I<C<zone>>]>
+
+
+
+B<context:> I<upstream>
+
+
+
+This directive appeared in version 1.27.3.
+
+
+
+
+
+Configures name servers used to resolve names of upstream servers
+into addresses, for example:
+
+    
+    resolver 127.0.0.1 [::1]:5353;
+
+
+The address can be specified as a domain name or IP address,
+with an optional port.
+If port is not specified, the port 53 is used.
+Name servers are queried in a round-robin fashion.
+
+
+
+
+
+By default, nginx will look up both IPv4 and IPv6 addresses while resolving.
+If looking up of IPv4 or IPv6 addresses is not desired,
+the C<ipv4=off> (1.23.1) or
+the C<ipv6=off> parameter can be specified.
+
+
+
+
+
+By default, nginx caches answers using the TTL value of a response.
+An optional C<valid> parameter allows overriding it:
+
+    
+    resolver 127.0.0.1 [::1]:5353 valid=30s;
+
+
+
+B<NOTE>
+
+To prevent DNS spoofing, it is recommended
+configuring DNS servers in a properly secured trusted local network.
+
+
+
+
+
+
+The optional C<status_zone> parameter (1.17.5)
+enables
+L<collection|ngx_http_api_module>
+of DNS server statistics of requests and responses
+in the specified I<C<zone>>.
+The parameter is available as part of our
+commercial subscription.
+
+
+
+
+
+
+B<NOTE>
+
+Since version 1.17.5 and prior to version 1.27.3,
+this directive was available only as part of our
+commercial subscription.
+
+
+
+
+
+
+
+
+=head2 resolver_timeout
+
+
+B<syntax:> resolver_timeout I<I<C<time>>>
+
+
+B<default:> I<30s>
+
+
+B<context:> I<upstream>
+
+
+
+This directive appeared in version 1.27.3.
+
+
+
+
+
+Sets a timeout for name resolution, for example:
+
+    
+    resolver_timeout 5s;
+
+
+
+
+
+
+
+
+B<NOTE>
+
+Since version 1.17.5 and prior to version 1.27.3,
+this directive was available only as part of our
+commercial subscription.
+
+
+
+
+
+
+
+
 =head2 sticky
 
 
@@ -1090,6 +1434,7 @@ B<syntax:> sticky I<
     [C<expires=>I<C<time>>]
     [C<domain=>I<C<domain>>]
     [C<httponly>]
+    [C<samesite=>C<strict>E<verbar>C<lax>E<verbar>C<none>E<verbar>I<C<$variable>>]
     [C<secure>]
     [C<path=>I<C<path>>]>
 
@@ -1104,7 +1449,8 @@ B<syntax:> sticky I<
     C<lookup=>I<C<$variable>>
     C<zone=>I<C<name>>:I<C<size>>
     [C<timeout=>I<C<time>>]
-    [C<header>]>
+    [C<header>]
+    [C<sync>]>
 
 
 
@@ -1155,6 +1501,15 @@ is passed to the server selected by the configured balancing method.
 Further requests with this cookie will be passed to the designated server.
 If the designated server cannot process a request, the new server is
 selected as if the client has not been bound yet.
+
+
+B<NOTE>
+
+As a load balancing method always tries to evenly distribute the load
+considering already bound requests,
+the server with a higher number of active bound requests
+has less possibility of getting new unbound requests.
+
 
 
 
@@ -1222,13 +1577,35 @@ Adds the C<HttpOnly> attribute to the cookie (1.7.11).
 
 
 
+=item C<samesite=>C<strict> E<verbar>
+C<lax> E<verbar> C<none> E<verbar> I<C<$variable>>
+
+
+
+
+Adds the C<SameSite> (1.19.4) attribute to the cookie
+with one of the following values:
+C<Strict>,
+C<Lax>,
+C<None>, or
+using variables (1.23.3).
+In the latter case, if the variable value is empty,
+the C<SameSite> attribute will not be added to the cookie,
+if the value is resolved to
+C<Strict>,
+C<Lax>, or
+C<None>,
+the corresponding value will be assigned,
+otherwise the C<Strict> value will be assigned.
+
+
+
 =item C<secure>
 
 
 
 
 Adds the C<Secure> attribute to the cookie (1.7.11).
-
 
 
 
@@ -1359,7 +1736,7 @@ non-empty variable is used.
 
 Sessions are stored in a shared memory zone, whose I<C<name>> and
 I<C<size>> are configured by the C<zone> parameter.
-One megabyte zone can store about 8000 sessions on the 64-bit platform.
+One megabyte zone can store about 4000 sessions on the 64-bit platform.
 The sessions that are not accessed during the time specified by the
 C<timeout> parameter get removed from the zone.
 By default, C<timeout> is set to 10 minutes.
@@ -1370,6 +1747,14 @@ By default, C<timeout> is set to 10 minutes.
 
 The C<header> parameter (1.13.1) allows creating a session
 right after receiving response headers from the upstream server.
+
+
+
+
+
+The C<sync> parameter (1.13.8) enables
+L<synchronization|ngx_stream_zone_sync_module>
+of the shared memory zone.
 
 
 
@@ -1475,6 +1860,18 @@ $upstream_addr variable.
 
 
 
+=item C<$upstream_bytes_sent>
+
+
+
+
+number of bytes sent to an upstream server (1.15.8).
+Values from several connections
+are separated by commas and colons like addresses in the
+$upstream_addr variable.
+
+
+
 =item C<$upstream_cache_status>
 
 
@@ -1546,6 +1943,49 @@ Only the header fields from the response of the last server are saved.
 
 
 
+=item C<$upstream_last_server_name>
+
+
+
+
+keeps the name of last selected upstream server (1.25.3);
+allows passing it
+L<through SNI|ngx_http_proxy_module>:
+
+    
+    proxy_ssl_server_name on;
+    proxy_ssl_name        $upstream_last_server_name;
+
+
+
+
+
+
+B<NOTE>
+
+This variable is available as part of our
+commercial subscription.
+
+
+
+
+
+
+
+=item C<$upstream_queue_time>
+
+
+
+
+keeps time the request spent in the upstream queue
+(1.13.9);
+the time is kept in seconds with millisecond resolution.
+Times of several responses
+are separated by commas and colons like addresses in the
+$upstream_addr variable.
+
+
+
 =item C<$upstream_response_length>
 
 
@@ -1585,6 +2025,16 @@ are separated by commas and colons like addresses in the
 $upstream_addr variable.
 If a server cannot be selected,
 the variable keeps the C<502> (C<Bad Gateway>) status code.
+
+
+
+=item C<$upstream_trailer_>I<C<name>>
+
+
+
+
+keeps fields from the end of the response
+obtained from the upstream server (1.13.10).
 
 
 

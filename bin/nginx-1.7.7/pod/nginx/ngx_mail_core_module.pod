@@ -24,7 +24,7 @@ the C<--with-mail> configuration parameter.
 
 
     
-    worker_processes 1;
+    worker_processes auto;
     
     error_log /var/log/nginx/error.log info;
     
@@ -77,6 +77,7 @@ the C<--with-mail> configuration parameter.
 B<syntax:> listen I<
     I<C<address>>:I<C<port>>
     [C<ssl>]
+    [C<proxy_protocol>]
     [C<backlog>=I<C<number>>]
     [C<rcvbuf>=I<C<size>>]
     [C<sndbuf>=I<C<size>>]
@@ -133,6 +134,19 @@ I<C<address>>:I<C<port>> pairs.
 
 The C<ssl> parameter allows specifying that all
 connections accepted on this port should work in SSL mode.
+
+
+
+
+
+The C<proxy_protocol> parameter (1.19.8)
+allows specifying that all connections accepted on this port should use the
+L<PROXY
+protocol|http://www.haproxy.org/download/1.8/doc/proxy-protocol.txt>.
+Obtained information is passed to the
+L<authentication server|ngx_mail_auth_http_module>
+and can be used to
+L<change the client address|ngx_mail_realip_module>.
 
 
 
@@ -201,7 +215,9 @@ for the given port (C<*:>I<C<port>>), nginx will
 C<bind> only to C<*:>I<C<port>>.
 It should be noted that the C<getsockname> system call will be
 made in this case to determine the address that accepted the connection.
-If the C<ipv6only>
+If the C<backlog>,
+C<rcvbuf>, C<sndbuf>,
+C<ipv6only>,
 or C<so_keepalive> parameters
 are used then for a given
 I<C<address>>:I<C<port>> pair
@@ -292,6 +308,36 @@ are specified.
 
 
 
+=head2 max_errors
+
+
+B<syntax:> max_errors I<I<C<number>>>
+
+
+B<default:> I<5>
+
+
+B<context:> I<mail>
+
+
+B<context:> I<server>
+
+
+
+This directive appeared in version 1.21.0.
+
+
+
+
+
+Sets the number of protocol errors after which the connection is closed.
+
+
+
+
+
+
+
 =head2 protocol
 
 
@@ -369,8 +415,11 @@ C<--without-mail_smtp_module>.
 
 
 B<syntax:> resolver I<
-I<C<address>> ...
-[C<valid>=I<C<time>>]>
+    I<C<address>> ...
+    [C<valid>=I<C<time>>]
+    [C<ipv4>=C<on>E<verbar>C<off>]
+    [C<ipv6>=C<on>E<verbar>C<off>]
+    [C<status_zone>=I<C<zone>>]>
 
 
 B<syntax:> resolver I<C<off>>
@@ -400,8 +449,8 @@ For example:
     resolver 127.0.0.1 [::1]:5353;
 
 
-An address can be specified as a domain name or IP address,
-and an optional port (1.3.1, 1.2.2).
+The address can be specified as a domain name or IP address,
+with an optional port (1.3.1, 1.2.2).
 If port is not specified, the port 53 is used.
 Name servers are queried in a round-robin fashion.
 
@@ -410,6 +459,26 @@ B<NOTE>
 Before version 1.1.7, only a single name server could be configured.
 Specifying name servers using IPv6 addresses is supported
 starting from versions 1.3.1 and 1.2.2.
+
+
+
+
+
+
+By default, nginx will look up both IPv4 and IPv6 addresses while resolving.
+If looking up of IPv4 or IPv6 addresses is not desired,
+the C<ipv4=off> (1.23.1) or
+the C<ipv6=off> parameter can be specified.
+
+B<NOTE>
+
+Resolving of names into IPv6 addresses is supported
+starting from version 1.5.8.
+
+
+
+
+
 
 By default, nginx caches answers using the TTL value of a response.
 An optional C<valid> parameter allows overriding it:
@@ -424,6 +493,24 @@ B<NOTE>
 Before version 1.1.9, tuning of caching time was not possible,
 and nginx always cached answers for the duration of 5 minutes.
 
+
+B<NOTE>
+
+To prevent DNS spoofing, it is recommended
+configuring DNS servers in a properly secured trusted local network.
+
+
+
+
+
+
+The optional C<status_zone> parameter (1.17.1)
+enables
+L<collection|ngx_http_api_module>
+of DNS server statistics of requests and responses
+in the specified I<C<zone>>.
+The parameter is available as part of our
+commercial subscription.
 
 
 

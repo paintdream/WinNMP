@@ -13,7 +13,7 @@ local FFI_BAD_CONTEXT = base.FFI_BAD_CONTEXT
 local FFI_NO_REQ_CTX = base.FFI_NO_REQ_CTX
 local FFI_DECLINED = base.FFI_DECLINED
 local get_string_buf = base.get_string_buf
-local getmetatable = getmetatable
+local setmetatable = setmetatable
 local type = type
 local tostring = tostring
 local get_request = base.get_request
@@ -45,6 +45,61 @@ ffi.cdef[[
 ]]
 
 
+local ngx_lua_ffi_set_resp_header
+
+local MACOS = jit and jit.os == "OSX"
+
+if MACOS then
+    ffi.cdef[[
+        typedef struct {
+            ngx_http_request_t   *r;
+            const char           *key_data;
+            size_t                key_len;
+            int                   is_nil;
+            const char           *sval;
+            size_t                sval_len;
+            void                 *mvals;
+            size_t                mvals_len;
+            int                   override;
+            char                **errmsg;
+        } ngx_http_lua_set_resp_header_params_t;
+
+        int ngx_http_lua_ffi_set_resp_header_macos(
+            ngx_http_lua_set_resp_header_params_t *p);
+    ]]
+
+    local set_params = ffi.new("ngx_http_lua_set_resp_header_params_t")
+
+    ngx_lua_ffi_set_resp_header = function(r, key, key_len, is_nil,
+                                           sval, sval_len, mvals,
+                                           mvals_len, override, err)
+
+        set_params.r = r
+        set_params.key_data = key
+        set_params.key_len = key_len
+        set_params.is_nil = is_nil
+        set_params.sval = sval
+        set_params.sval_len = sval_len
+        set_params.mvals = mvals
+        set_params.mvals_len = mvals_len
+        set_params.override = override
+        set_params.errmsg = err
+
+        return C.ngx_http_lua_ffi_set_resp_header_macos(set_params)
+    end
+
+else
+    ngx_lua_ffi_set_resp_header = function(r, key, key_len, is_nil,
+                                           sval, sval_len, mvals,
+                                           mvals_len, override, err)
+
+        return C.ngx_http_lua_ffi_set_resp_header(r, key, key_len, is_nil,
+                                                  sval, sval_len, mvals,
+                                                  mvals_len, override, err)
+    end
+end
+
+
 local function set_resp_header(tb, key, value, no_override)
     local r = get_request()
     if not r then
@@ -61,13 +116,17 @@ local function set_resp_header(tb, key, value, no_override)
             error("invalid header value", 3)
         end
 
-        rc = C.ngx_http_lua_ffi_set_resp_header(r, key, #key, true, nil, 0, nil,
-                                                0, 1, errmsg)
+        rc = ngx_lua_ffi_set_resp_header(r, key, #key, true, nil, 0, nil,
+                                         0, 1, errmsg)
     else
         local sval, sval_len, mvals, mvals_len, buf
 
         if type(value) == "table" then
             mvals_len = #value
+            if mvals_len == 0 and no_override then
+                return
+            end
+
             buf = get_string_buf(ffi_str_size * mvals_len)
             mvals = ffi_cast(ffi_str_type, buf)
             for i = 1, mvals_len do
@@ -95,9 +154,9 @@ local function set_resp_header(tb, key, value, no_override)
         end
 
         local override_int = no_override and 0 or 1
-        rc = C.ngx_http_lua_ffi_set_resp_header(r, key, #key, false, sval,
-                                                sval_len, mvals, mvals_len,
-                                                override_int, errmsg)
+        rc = ngx_lua_ffi_set_resp_header(r, key, #key, false, sval,
+                                         sval_len, mvals, mvals_len,
+                                         override_int, errmsg)
     end
 
     if rc == 0 or rc == FFI_DECLINED then
@@ -168,9 +227,11 @@ end
 
 
 do
-    local mt = getmetatable(ngx.header)
+    local mt = new_tab(0, 2)
     mt.__newindex = set_resp_header
     mt.__index = get_resp_header
+
+    ngx.header = setmetatable(new_tab(0, 0), mt)
 end
 
 

@@ -549,7 +549,7 @@ specifies an included request, for example:
 
 
 Several requests specified on one page and processed by proxied or
-FastCGIE<sol>uwsgiE<sol>SCGI servers run in parallel.
+FastCGIE<sol>uwsgiE<sol>SCGIE<sol>gRPC servers run in parallel.
 If sequential processing is desired, the C<wait>
 parameter should be used.
 
@@ -601,13 +601,31 @@ for example:
     <!--# include virtual="/remote/body.php?argument=value" set="one" -->
 
 
-It should be noted that only the results of responses obtained using the
+The maximum size of the response is set by the
+L<ngx_http_core_module>
+directive (1.13.10):
+
+    
+    location /remote/ {
+        subrequest_output_buffer_size 64k;
+        ...
+    }
+
+
+Prior to version 1.13.10, only the results of responses obtained using the
 L<ngx_http_proxy_module|ngx_http_proxy_module>,
 L<ngx_http_memcached_module|ngx_http_memcached_module>,
 L<ngx_http_fastcgi_module|ngx_http_fastcgi_module> (1.5.6),
 L<ngx_http_uwsgi_module|ngx_http_uwsgi_module> (1.5.6),
 and L<ngx_http_scgi_module|ngx_http_scgi_module> (1.5.6)
-modules can be written into variables.
+modules could be written into variables.
+The maximum size of the response was set with the
+L<ngx_http_proxy_module>,
+L<ngx_http_memcached_module>,
+L<ngx_http_fastcgi_module>,
+L<ngx_http_uwsgi_module>,
+and L<ngx_http_scgi_module>
+directives.
 
 
 

@@ -14,7 +14,7 @@ local assert = assert
 
 
 local _M = {
-    _VERSION = '0.06'
+    _VERSION = '0.08'
 }
 
 
@@ -72,7 +72,7 @@ function _M.incoming(self, key, commit)
     end
 
     if conn > max then
-        -- make the exessive connections wait
+        -- make the excessive connections wait
         return self.unit_delay * floor((conn - 1) / max), conn
     end
 

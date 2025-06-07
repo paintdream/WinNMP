@@ -192,7 +192,9 @@ by default, 1.
 
 
 =item 
-C<mandatory>
+C<mandatory> [C<persistent>]
+
+
 
 
 
@@ -203,6 +205,17 @@ until the first health check is completed (1.11.7).
 Client connections are not passed to servers in the “checking” state.
 If the parameter is not specified,
 the server will be initially considered healthy.
+
+
+
+
+
+The C<persistent> parameter (1.21.1)
+sets the initial “up” state for a server after reload
+if the server was considered healthy before reload.
+
+
+
 
 
 

@@ -317,6 +317,43 @@ directive instead:
 
 
 
+=head2 auth_delay
+
+
+B<syntax:> auth_delay I<I<C<time>>>
+
+
+B<default:> I<0s>
+
+
+B<context:> I<http>
+
+
+B<context:> I<server>
+
+
+B<context:> I<location>
+
+
+
+This directive appeared in version 1.17.10.
+
+
+
+
+
+Delays processing of unauthorized requests with 401 response code
+to prevent timing attacks when access is limited by
+L<password|ngx_http_auth_basic_module>, by the
+L<result of subrequest|ngx_http_auth_request_module>,
+or by L<JWT|ngx_http_auth_jwt_module>.
+
+
+
+
+
+
+
 =head2 chunked_transfer_encoding
 
 
@@ -542,8 +579,9 @@ Defines a timeout for reading client request body.
 The timeout is set only for a period between two successive read operations,
 not for the transmission of the whole request body.
 If a client does not transmit anything within this time, the
+request is terminated with the
 C<408> (C<Request Time-out>)
-error is returned to the client.
+error.
 
 
 
@@ -582,6 +620,16 @@ are allocated.
 
 
 
+If the directive is specified on the L</server> level,
+the value from the default server can be used.
+Details are provided in the
+“L<Virtual
+server selection|server_names>” section.
+
+
+
+
+
 
 
 =head2 client_header_timeout
@@ -604,8 +652,9 @@ B<context:> I<server>
 
 Defines a timeout for reading client request header.
 If a client does not transmit the entire header within this time, the
+request is terminated with the
 C<408> (C<Request Time-out>)
-error is returned to the client.
+error.
 
 
 
@@ -634,10 +683,7 @@ B<context:> I<location>
 
 
 
-Sets the maximum allowed size of the client request body,
-specified in the
-C<Content-Length>
-request header field.
+Sets the maximum allowed size of the client request body.
 If the size in a request exceeds the configured value, the
 C<413> (C<Request Entity Too Large>)
 error is returned to the client.
@@ -1016,7 +1062,7 @@ using the “C<=>I<C<response>>” syntax, for example:
 
 
 If an error response is processed by a proxied server
-or a FastCGIE<sol>uwsgiE<sol>SCGI server,
+or a FastCGIE<sol>uwsgiE<sol>SCGIE<sol>gRPC server,
 and the server may return different response codes (e.g., 200, 302, 401
 or 404), it is possible to respond with the code it returns:
 
@@ -1084,10 +1130,9 @@ The code 308 was not treated as a redirect until version 1.13.0.
 
 
 
-These directives are inherited from the previous level if and
-only if there are no
-C<error_page>
-directives defined on the current level.
+These directives are inherited from the previous configuration level
+if and only if there are no C<error_page> directives
+defined on the current level.
 
 
 
@@ -1194,8 +1239,7 @@ request header field:
 
 
 
-the
-C<If-Modified-Since> request header field is ignored (0.7.34);
+the response is always considered modified (0.7.34);
 
 
 
@@ -1213,7 +1257,7 @@ exact match;
 
 
 
-modification time of a response is
+modification time of the response is
 less than or equal to the time in the C<If-Modified-Since>
 request header field.
 
@@ -1258,9 +1302,10 @@ directive).
 
 
 If the directive is specified on the L</server> level,
-its value is only used if a server is a default one.
-The value specified also applies to all virtual servers
-listening on the same address and port.
+the value from the default server can be used.
+Details are provided in the
+“L<Virtual
+server selection|server_names>” section.
 
 
 
@@ -1296,6 +1341,7 @@ Internal requests are the following:
 requests redirected by the
 L</error_page>,
 L<ngx_http_index_module>,
+L<ngx_http_internal_redirect_module>,
 L<ngx_http_random_index_module>, and
 L</try_files> directives;
 
@@ -1342,7 +1388,7 @@ Example:
     
     error_page 404 /404.html;
     
-    location /404.html {
+    location = /404.html {
         internal;
     }
 
@@ -1409,13 +1455,48 @@ keep-alive connections with them were disabled by default.
 
 
 
+=head2 keepalive_min_timeout
+
+
+B<syntax:> keepalive_min_timeout I<I<C<timeout>>>
+
+
+B<default:> I<0>
+
+
+B<context:> I<http>
+
+
+B<context:> I<server>
+
+
+B<context:> I<location>
+
+
+
+This directive appeared in version 1.27.4.
+
+
+
+
+
+Sets a timeout during which a keep-alive
+client connection will not be closed on the server side
+for connection reuse or on graceful shutdown of worker processes.
+
+
+
+
+
+
+
 =head2 keepalive_requests
 
 
 B<syntax:> keepalive_requests I<I<C<number>>>
 
 
-B<default:> I<100>
+B<default:> I<1000>
 
 
 B<context:> I<http>
@@ -1437,6 +1518,61 @@ This directive appeared in version 0.8.0.
 Sets the maximum number of requests that can be
 served through one keep-alive connection.
 After the maximum number of requests are made, the connection is closed.
+
+
+
+
+
+Closing connections periodically is necessary to free
+per-connection memory allocations.
+Therefore, using too high maximum number of requests
+could result in excessive memory usage and not recommended.
+
+
+
+
+
+
+B<NOTE>
+
+Prior to version 1.19.10, the default value was 100.
+
+
+
+
+
+
+
+
+=head2 keepalive_time
+
+
+B<syntax:> keepalive_time I<I<C<time>>>
+
+
+B<default:> I<1h>
+
+
+B<context:> I<http>
+
+
+B<context:> I<server>
+
+
+B<context:> I<location>
+
+
+
+This directive appeared in version 1.19.10.
+
+
+
+
+
+Limits the maximum time during which
+requests can be processed through one keep-alive connection.
+After this time is reached, the connection is closed
+following the subsequent request processing.
 
 
 
@@ -1525,6 +1661,16 @@ into the keep-alive state, these buffers are released.
 
 
 
+If the directive is specified on the L</server> level,
+the value from the default server can be used.
+Details are provided in the
+“L<Virtual
+server selection|server_names>” section.
+
+
+
+
+
 
 
 =head2 limit_except
@@ -1560,9 +1706,11 @@ C<PATCH>.
 Allowing the C<GET> method makes the
 C<HEAD> method also allowed.
 Access to other methods can be limited using the
-L<ngx_http_access_module|ngx_http_access_module>
+L<ngx_http_access_module|ngx_http_access_module>,
+L<ngx_http_auth_basic_module|ngx_http_auth_basic_module>,
 and
-L<ngx_http_auth_basic_module|ngx_http_auth_basic_module>
+L<ngx_http_auth_jwt_module|ngx_http_auth_jwt_module>
+(1.13.10)
 modules directives:
 
     
@@ -1616,9 +1764,27 @@ as the specified limit.
 
 
 
-Rate limit can also be set in the C<$limit_rate> variable.
+Parameter value can contain variables (1.17.0).
 It may be useful in cases where rate should be limited
 depending on a certain condition:
+
+    
+    map $slow $rate {
+        1     4k;
+        2     8k;
+    }
+    
+    limit_rate $rate;
+
+
+
+
+
+
+
+Rate limit can also be set in the
+C<$limit_rate> variable,
+however, since version 1.17.0, this method is not recommended:
 
     
     server {
@@ -1682,6 +1848,7 @@ This directive appeared in version 0.8.0.
 
 Sets the initial amount after which the further transmission
 of a response to a client will be rate limited.
+Parameter value can contain variables (1.17.0).
 
 
 
@@ -1768,6 +1935,14 @@ circumstances.
 
 
 
+To control closing
+L<HTTPE<sol>2|ngx_http_v2_module> connections,
+the directive must be specified on the L</server> level (1.19.1).
+
+
+
+
+
 
 
 =head2 lingering_time
@@ -1845,7 +2020,8 @@ B<syntax:> listen I<
     I<C<address>>[:I<C<port>>]
     [C<default_server>]
     [C<ssl>]
-    [C<http2> E<verbar> C<spdy>]
+    [C<http2> E<verbar>
+     C<quic>]
     [C<proxy_protocol>]
     [C<setfib>=I<C<number>>]
     [C<fastopen>=I<C<number>>]
@@ -1864,7 +2040,8 @@ B<syntax:> listen I<
     I<C<port>>
     [C<default_server>]
     [C<ssl>]
-    [C<http2> E<verbar> C<spdy>]
+    [C<http2> E<verbar>
+     C<quic>]
     [C<proxy_protocol>]
     [C<setfib>=I<C<number>>]
     [C<fastopen>=I<C<number>>]
@@ -1883,7 +2060,8 @@ B<syntax:> listen I<
     C<unix:>I<C<path>>
     [C<default_server>]
     [C<ssl>]
-    [C<http2> E<verbar> C<spdy>]
+    [C<http2> E<verbar>
+     C<quic>]
     [C<proxy_protocol>]
     [C<backlog>=I<C<number>>]
     [C<rcvbuf>=I<C<size>>]
@@ -1984,15 +2162,19 @@ Normally, for this to work the C<ssl> parameter should be
 specified as well, but nginx can also be configured to accept HTTPE<sol>2
 connections without SSL.
 
+B<NOTE>
+
+The parameter is deprecated,
+the L<http2|ngx_http_v2_module> directive
+should be used instead.
 
 
 
 
-The C<spdy> parameter (1.3.15-1.9.4) allows accepting
-L<SPDY|ngx_http_spdy_module> connections on this port.
-Normally, for this to work the C<ssl> parameter should be
-specified as well, but nginx can also be configured to accept SPDY
-connections without SSL.
+
+
+The C<quic> parameter (1.25.0) configures the port to accept
+L<QUIC|ngx_http_v3_module> connections.
 
 
 
@@ -2001,7 +2183,12 @@ connections without SSL.
 The C<proxy_protocol> parameter (1.5.12)
 allows specifying that all connections accepted on this port should use the
 L<PROXY
-protocol|http://www.haproxy.org/download/1.5/doc/proxy-protocol.txt>.
+protocol|http://www.haproxy.org/download/1.8/doc/proxy-protocol.txt>.
+
+B<NOTE>
+
+The PROXY protocol version 2 is supported since version 1.13.11.
+
 
 
 
@@ -2047,7 +2234,7 @@ C<fastopen>=I<C<number>>
 enables
 “L<TCP Fast Open|http://en.wikipedia.org/wiki/TCP_Fast_Open>”
 for the listening socket (1.5.8) and
-L<limits|https://tools.ietf.org/html/rfc7413#section-5.1>
+L<limits|https://datatracker.ietf.org/doc/html/rfc7413#section-5.1>
 the maximum length for the queue of connections that have not yet completed
 the three-way handshake.
 
@@ -2055,7 +2242,7 @@ B<NOTE>
 
 Do not enable this feature unless the server can handle
 receiving the
-L<same SYN packet with data|https://tools.ietf.org/html/rfc7413#section-6.1> more than once.
+L<same SYN packet with data|https://datatracker.ietf.org/doc/html/rfc7413#section-6.1> more than once.
 
 
 
@@ -2148,9 +2335,11 @@ will C<bind> only to C<*:>I<C<port>>.
 It should be noted that the C<getsockname> system call will be
 made in this case to determine the address that accepted the connection.
 If the C<setfib>,
+C<fastopen>,
 C<backlog>, C<rcvbuf>,
 C<sndbuf>, C<accept_filter>,
 C<deferred>, C<ipv6only>,
+C<reuseport>,
 or C<so_keepalive> parameters
 are used then for a given
 I<C<address>>:I<C<port>> pair
@@ -2190,9 +2379,12 @@ C<reuseport>
 
 this parameter (1.9.1) instructs to create an individual listening socket
 for each worker process
-(using the C<SO_REUSEPORT> socket option), allowing a kernel
+(using the
+C<SO_REUSEPORT> socket option on Linux 3.9+ and DragonFly BSD,
+or C<SO_REUSEPORT_LB> on FreeBSDE<nbsp>12+), allowing a kernel
 to distribute incoming connections between worker processes.
-This currently works only on Linux 3.9+ and DragonFly BSD.
+This currently works only on Linux 3.9+, DragonFly BSD,
+and FreeBSD 12+ (1.15.1).
 
 B<NOTE>
 
@@ -2422,8 +2614,9 @@ and requests are processed by one of
 L<ngx_http_proxy_module>,
 L<ngx_http_fastcgi_module>,
 L<ngx_http_uwsgi_module>,
-L<ngx_http_scgi_module>, or
-L<ngx_http_memcached_module>,
+L<ngx_http_scgi_module>,
+L<ngx_http_memcached_module>, or
+L<ngx_http_grpc_module>,
 then the special processing is performed.
 In response to a request with URI equal to this string,
 but without the trailing slash,
@@ -2595,9 +2788,10 @@ the compression off.
 
 
 If the directive is specified on the L</server> level,
-its value is only used if a server is a default one.
-The value specified also applies to all virtual servers
-listening on the same address and port.
+the value from the default server can be used.
+Details are provided in the
+“L<Virtual
+server selection|server_names>” section.
 
 
 
@@ -3122,7 +3316,10 @@ B<context:> I<location>
 
 
 
-Enables or disables resetting timed out connections.
+Enables or disables resetting timed out connections
+and connections
+L<closed|ngx_http_rewrite_module>
+with the non-standard code 444 (1.15.2).
 The reset is performed as follows.
 Before closing a socket, the
 C<SO_LINGER>
@@ -3151,7 +3348,9 @@ closed normally.
 B<syntax:> resolver I<
     I<C<address>> ...
     [C<valid>=I<C<time>>]
-    [C<ipv6>=C<on>E<verbar>C<off>]>
+    [C<ipv4>=C<on>E<verbar>C<off>]
+    [C<ipv6>=C<on>E<verbar>C<off>]
+    [C<status_zone>=I<C<zone>>]>
 
 
 
@@ -3174,8 +3373,8 @@ into addresses, for example:
     resolver 127.0.0.1 [::1]:5353;
 
 
-An address can be specified as a domain name or IP address,
-and an optional port (1.3.1, 1.2.2).
+The address can be specified as a domain name or IP address,
+with an optional port (1.3.1, 1.2.2).
 If port is not specified, the port 53 is used.
 Name servers are queried in a round-robin fashion.
 
@@ -3185,14 +3384,25 @@ Before version 1.1.7, only a single name server could be configured.
 Specifying name servers using IPv6 addresses is supported
 starting from versions 1.3.1 and 1.2.2.
 
+
+
+
+
+
 By default, nginx will look up both IPv4 and IPv6 addresses while resolving.
-If looking up of IPv6 addresses is not desired,
+If looking up of IPv4 or IPv6 addresses is not desired,
+the C<ipv4=off> (1.23.1) or
 the C<ipv6=off> parameter can be specified.
 
 B<NOTE>
 
 Resolving of names into IPv6 addresses is supported
 starting from version 1.5.8.
+
+
+
+
+
 
 By default, nginx caches answers using the TTL value of a response.
 An optional C<valid> parameter allows overriding it:
@@ -3213,6 +3423,18 @@ B<NOTE>
 To prevent DNS spoofing, it is recommended
 configuring DNS servers in a properly secured trusted local network.
 
+
+
+
+
+
+The optional C<status_zone> parameter (1.17.1)
+enables
+L<collection|ngx_http_api_module>
+of DNS server statistics of requests and responses
+in the specified I<C<zone>>.
+The parameter is available as part of our
+commercial subscription.
 
 
 
@@ -3512,7 +3734,7 @@ C<aio sendfile;>.
 B<syntax:> sendfile_max_chunk I<I<C<size>>>
 
 
-B<default:> I<0>
+B<default:> I<2m>
 
 
 B<context:> I<http>
@@ -3527,9 +3749,14 @@ B<context:> I<location>
 
 
 
-When set to a non-zero value, limits the amount of data that can be
+Limits the amount of data that can be
 transferred in a single C<sendfile> call.
 Without the limit, one fast connection may seize the worker process entirely.
+
+B<NOTE>
+
+Prior to version 1.21.4, by default there was no limit.
+
 
 
 
@@ -3922,6 +4149,52 @@ An empty string disables the emission of the C<Server> field.
 
 
 
+=head2 subrequest_output_buffer_size
+
+
+B<syntax:> subrequest_output_buffer_size I<I<C<size>>>
+
+
+B<default:> I<4kE<verbar>8k>
+
+
+B<context:> I<http>
+
+
+B<context:> I<server>
+
+
+B<context:> I<location>
+
+
+
+This directive appeared in version 1.13.10.
+
+
+
+
+
+Sets the I<C<size>> of the buffer used for
+storing the response body of a subrequest.
+By default, the buffer size is equal to one memory page.
+This is either 4K or 8K, depending on a platform.
+It can be made smaller, however.
+
+
+
+
+
+The directive is applicable only for subrequests
+with response bodies saved into memory.
+For example, such subrequests are created by
+L<SSI|ngx_http_ssi_module>.
+
+
+
+
+
+
+
 =head2 tcp_nodelay
 
 
@@ -3944,8 +4217,11 @@ B<context:> I<location>
 
 
 Enables or disables the use of the C<TCP_NODELAY> option.
-The option is enabled only when a connection is transitioned into the
+The option is enabled when a connection is transitioned into the
 keep-alive state.
+Additionally, it is enabled on SSL connections,
+for unbuffered proxying,
+and for L<WebSocket|websocket> proxying.
 
 
 
@@ -4348,9 +4624,10 @@ L</ignore_invalid_headers> directive.
 
 
 If the directive is specified on the L</server> level,
-its value is only used if a server is a default one.
-The value specified also applies to all virtual servers
-listening on the same address and port.
+the value from the default server can be used.
+Details are provided in the
+“L<Virtual
+server selection|server_names>” section.
 
 
 
@@ -4492,6 +4769,15 @@ connection serial number (1.3.8, 1.2.5)
 
 
 current number of requests made through a connection (1.3.8, 1.2.5)
+
+
+
+=item C<$connection_time>
+
+
+
+
+connection time in seconds with a milliseconds resolution (1.19.10)
 
 
 
@@ -4646,8 +4932,7 @@ otherwise (1.3.12, 1.2.7)
 
 
 
-client address from the PROXY protocol header, or an empty string otherwise
-(1.5.12)
+client address from the PROXY protocol header (1.5.12)
 
 
 The PROXY protocol must be previously enabled by setting the
@@ -4663,8 +4948,200 @@ in the L</listen> directive.
 
 
 
-client port from the PROXY protocol header, or an empty string otherwise
-(1.11.0)
+client port from the PROXY protocol header (1.11.0)
+
+
+The PROXY protocol must be previously enabled by setting the
+C<proxy_protocol> parameter
+in the L</listen> directive.
+
+
+
+
+
+=item C<$proxy_protocol_server_addr>
+
+
+
+
+server address from the PROXY protocol header (1.17.6)
+
+
+The PROXY protocol must be previously enabled by setting the
+C<proxy_protocol> parameter
+in the L</listen> directive.
+
+
+
+
+
+=item C<$proxy_protocol_server_port>
+
+
+
+
+server port from the PROXY protocol header (1.17.6)
+
+
+The PROXY protocol must be previously enabled by setting the
+C<proxy_protocol> parameter
+in the L</listen> directive.
+
+
+
+
+
+=item C<$proxy_protocol_tlv_>I<C<name>>
+
+
+
+
+TLV from the PROXY Protocol header (1.23.2).
+The C<name> can be a TLV type name or its numeric value.
+In the latter case, the value is hexadecimal
+and should be prefixed with C<0x>:
+
+
+    
+    $proxy_protocol_tlv_alpn
+    $proxy_protocol_tlv_0x01
+
+
+SSL TLVs can also be accessed by TLV type name
+or its numeric value,
+both prefixed by C<ssl_>:
+
+    
+    $proxy_protocol_tlv_ssl_version
+    $proxy_protocol_tlv_ssl_0x21
+
+
+
+
+
+The following TLV type names are supported:
+
+=over
+
+
+
+
+=item *
+
+C<alpn> (C<0x01>)E<mdash>
+upper layer protocol used over the connection
+
+
+
+=item *
+
+C<authority> (C<0x02>)E<mdash>
+host name value passed by the client
+
+
+
+=item *
+
+C<unique_id> (C<0x05>)E<mdash>
+unique connection id
+
+
+
+=item *
+
+C<netns> (C<0x30>)E<mdash>
+name of the namespace
+
+
+
+=item *
+
+C<ssl> (C<0x20>)E<mdash>
+binary SSL TLV structure
+
+
+
+=back
+
+
+
+
+
+
+
+The following SSL TLV type names are supported:
+
+=over
+
+
+
+
+=item *
+
+C<ssl_version> (C<0x21>)E<mdash>
+SSL version used in client connection
+
+
+
+=item *
+
+C<ssl_cn> (C<0x22>)E<mdash>
+SSL certificate Common Name
+
+
+
+=item *
+
+C<ssl_cipher> (C<0x23>)E<mdash>
+name of the used cipher
+
+
+
+=item *
+
+C<ssl_sig_alg> (C<0x24>)E<mdash>
+algorithm used to sign the certificate
+
+
+
+=item *
+
+C<ssl_key_alg> (C<0x25>)E<mdash>
+public-key algorithm
+
+
+
+=back
+
+
+
+
+
+
+
+Also, the following special SSL TLV type name is supported:
+
+=over
+
+
+
+
+=item *
+
+C<ssl_verify>E<mdash>
+client SSL certificate verification result,
+C<0> if the client presented a certificate
+and it was successfully verified,
+non-zero otherwise.
+
+
+
+=back
+
+
+
+
+
 
 
 The PROXY protocol must be previously enabled by setting the
@@ -4922,8 +5399,9 @@ port of the server which accepted a request
 request protocol, usually
 “C<HTTPE<sol>1.0>”,
 “C<HTTPE<sol>1.1>”,
+“L<HTTPE<sol>2.0|ngx_http_v2_module>”,
 or
-“L<HTTPE<sol>2.0|ngx_http_v2_module>”
+“L<HTTPE<sol>3.0|ngx_http_v3_module>”
 
 
 

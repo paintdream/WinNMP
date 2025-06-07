@@ -67,6 +67,37 @@ will not work with this module.
 
 =head1 Directives
 
+=head2 create_full_put_path
+
+
+B<syntax:> create_full_put_path I<C<on> E<verbar> C<off>>
+
+
+B<default:> I<off>
+
+
+B<context:> I<http>
+
+
+B<context:> I<server>
+
+
+B<context:> I<location>
+
+
+
+
+
+The WebDAV specification only allows creating files in already
+existing directories.
+This directive allows creating all needed intermediate directories.
+
+
+
+
+
+
+
 =head2 dav_access
 
 
@@ -164,37 +195,6 @@ directive, are put on the same file system.
 When creating a file with the PUT method, it is possible to specify
 the modification date by passing it in the C<Date>
 header field.
-
-
-
-
-
-
-
-=head2 create_full_put_path
-
-
-B<syntax:> create_full_put_path I<C<on> E<verbar> C<off>>
-
-
-B<default:> I<off>
-
-
-B<context:> I<http>
-
-
-B<context:> I<server>
-
-
-B<context:> I<location>
-
-
-
-
-
-The WebDAV specification only allows creating files in already
-existing directories.
-This directive allows creating all needed intermediate directories.
 
 
 

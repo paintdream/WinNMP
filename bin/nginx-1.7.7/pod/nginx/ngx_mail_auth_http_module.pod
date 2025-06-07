@@ -304,6 +304,9 @@ C<Auth-SSL-Serial>, and C<Auth-SSL-Fingerprint>.
 If L</auth_http_pass_client_cert> is enabled,
 the certificate itself is passed in the
 C<Auth-SSL-Cert> header.
+The protocol and cipher of the established connection
+are passed in the C<Auth-SSL-Protocol>
+and C<Auth-SSL-Cipher> headers (1.21.2).
 The request will look as follows:
 
     
@@ -316,6 +319,8 @@ The request will look as follows:
     Auth-Login-Attempt: 1
     Client-IP: 192.0.2.42
     Auth-SSL: on
+    Auth-SSL-Protocol: TLSv1.3
+    Auth-SSL-Cipher: TLS_AES_256_GCM_SHA384
     Auth-SSL-Verify: SUCCESS
     Auth-SSL-Subject: /CN=example.com
     Auth-SSL-Issuer: /CN=example.com
@@ -323,6 +328,19 @@ The request will look as follows:
     Auth-SSL-Fingerprint: 29d6a80a123d13355ed16b4b04605e29cb55a5ad
 
 
+
+
+
+
+
+When the
+L<PROXY protocol|ngx_mail_core_module>
+is used,
+its details are passed in the following request headers:
+C<Proxy-Protocol-Addr>,
+C<Proxy-Protocol-Port>,
+C<Proxy-Protocol-Server-Addr>, and
+C<Proxy-Protocol-Server-Port> (1.19.8).
 
 
 

@@ -12,9 +12,8 @@ ngx_http_v2_module - Module ngx_http_v2_module
 
 
 The C<ngx_http_v2_module> module (1.9.5) provides
-support for L<HTTPE<sol>2|https://tools.ietf.org/html/rfc7540>
-and supersedes the
-L<ngx_http_spdy_module|ngx_http_spdy_module> module.
+support for
+L<HTTPE<sol>2|https://datatracker.ietf.org/doc/html/rfc7540>.
 
 
 
@@ -43,6 +42,14 @@ directive values.
 
 
 
+
+Before version 1.19.1,
+the L<ngx_http_core_module> mechanism
+was not used to control closing HTTPE<sol>2 connections.
+
+
+
+
 =head1 Example Configuration
 
 
@@ -50,7 +57,9 @@ directive values.
 
     
     server {
-        listen 443 ssl http2;
+        listen 443 ssl;
+    
+        http2 on;
     
         ssl_certificate server.crt;
         ssl_certificate_key server.key;
@@ -59,10 +68,8 @@ directive values.
 
 Note that accepting HTTPE<sol>2 connections over TLS requires
 the “Application-Layer Protocol Negotiation” (ALPN) TLS extension
-support, which is available only since
+support, which is available since
 L<OpenSSL|http://www.openssl.org> version 1.0.2.
-Using the “Next Protocol Negotiation” (NPN) TLS extension for this purpose
-(available since OpenSSL version 1.0.1) is not guaranteed to work.
 
 
 
@@ -73,7 +80,7 @@ L<ngx_http_ssl_module> directive
 is set to the value “C<on>”,
 the L<ciphers|ngx_http_ssl_module>
 should be configured to comply with
-L<RFC 7540, Appendix A|https://tools.ietf.org/html/rfc7540#appendix-A>
+L<RFC 9113, Appendix A|https://datatracker.ietf.org/doc/html/rfc9113#appendix-A>
 black list and supported by clients.
 
 
@@ -81,13 +88,13 @@ black list and supported by clients.
 
 =head1 Directives
 
-=head2 http2_chunk_size
+=head2 http2
 
 
-B<syntax:> http2_chunk_size I<I<C<size>>>
+B<syntax:> http2 I<C<on> E<verbar> C<off>>
 
 
-B<default:> I<8k>
+B<default:> I<off>
 
 
 B<context:> I<http>
@@ -96,17 +103,16 @@ B<context:> I<http>
 B<context:> I<server>
 
 
-B<context:> I<location>
+
+This directive appeared in version 1.25.1.
 
 
 
 
 
-Sets the maximum size of chunks
-into which the response body is sliced.
-A too low value results in higher overhead.
-A too high value impairs prioritization due to
-L<HOL blocking|http://en.wikipedia.org/wiki/Head-of-line_blocking>.
+Enables
+the L<HTTPE<sol>2|https://datatracker.ietf.org/doc/html/rfc9113>
+protocol.
 
 
 
@@ -146,6 +152,39 @@ before it is started to be processed.
 
 
 
+=head2 http2_chunk_size
+
+
+B<syntax:> http2_chunk_size I<I<C<size>>>
+
+
+B<default:> I<8k>
+
+
+B<context:> I<http>
+
+
+B<context:> I<server>
+
+
+B<context:> I<location>
+
+
+
+
+
+Sets the maximum size of chunks
+into which the response body is sliced.
+A too low value results in higher overhead.
+A too high value impairs prioritization due to
+L<HOL blocking|http://en.wikipedia.org/wiki/Head-of-line_blocking>.
+
+
+
+
+
+
+
 =head2 http2_idle_timeout
 
 
@@ -164,7 +203,60 @@ B<context:> I<server>
 
 
 
+
+B<NOTE>
+
+This directive is obsolete since version 1.19.7.
+The L<ngx_http_core_module>
+directive should be used instead.
+
+
+
+
+
+
 Sets the timeout of inactivity after which the connection is closed.
+
+
+
+
+
+
+
+=head2 http2_max_concurrent_pushes
+
+
+B<syntax:> http2_max_concurrent_pushes I<I<C<number>>>
+
+
+B<default:> I<10>
+
+
+B<context:> I<http>
+
+
+B<context:> I<server>
+
+
+
+This directive appeared in version 1.13.9.
+
+
+
+
+
+
+B<NOTE>
+
+This directive is obsolete since version 1.25.1.
+
+
+
+
+
+
+Limits the maximum number of concurrent
+push requests in a connection.
 
 
 
@@ -217,8 +309,20 @@ B<context:> I<server>
 
 
 
+
+B<NOTE>
+
+This directive is obsolete since version 1.19.7.
+The L<ngx_http_core_module>
+directive should be used instead.
+
+
+
+
+
+
 Limits the maximum size of
-an L<HPACK|https://tools.ietf.org/html/rfc7541>-compressed
+an L<HPACK|https://datatracker.ietf.org/doc/html/rfc7541>-compressed
 request header field.
 The limit applies equally to both name and value.
 Note that if Huffman encoding is applied,
@@ -249,8 +353,20 @@ B<context:> I<server>
 
 
 
+
+B<NOTE>
+
+This directive is obsolete since version 1.19.7.
+The L<ngx_http_core_module>
+directive should be used instead.
+
+
+
+
+
+
 Limits the maximum size of the entire request header list after
-L<HPACK|https://tools.ietf.org/html/rfc7541> decompression.
+L<HPACK|https://datatracker.ietf.org/doc/html/rfc7541> decompression.
 For most requests, the default limit should be enough.
 
 
@@ -281,10 +397,144 @@ This directive appeared in version 1.11.6.
 
 
 
-Sets the maximum number of requests that can be
-served through one HTTPE<sol>2 connection,
-after which the connection is closed
-and the client should use a new connection.
+
+B<NOTE>
+
+This directive is obsolete since version 1.19.7.
+The L<ngx_http_core_module>
+directive should be used instead.
+
+
+
+
+
+
+Sets the maximum number of requests (including
+push requests) that can be served
+through one HTTPE<sol>2 connection,
+after which the next client request will lead to connection closing
+and the need of establishing a new connection.
+
+
+
+
+
+Closing connections periodically is necessary to free
+per-connection memory allocations.
+Therefore, using too high maximum number of requests
+could result in excessive memory usage and not recommended.
+
+
+
+
+
+
+
+=head2 http2_push
+
+
+B<syntax:> http2_push I<I<C<uri>> E<verbar> C<off>>
+
+
+B<default:> I<off>
+
+
+B<context:> I<http>
+
+
+B<context:> I<server>
+
+
+B<context:> I<location>
+
+
+
+This directive appeared in version 1.13.9.
+
+
+
+
+
+
+B<NOTE>
+
+This directive is obsolete since version 1.25.1.
+
+
+
+
+
+
+Pre-emptively sends
+(L<pushes|https://datatracker.ietf.org/doc/html/rfc9113#section-8.4>)
+a request to the specified I<C<uri>>
+along with the response to the original request.
+Only relative URIs with absolute path will be processed,
+for example:
+
+    
+    http2_push /static/css/main.css;
+
+
+The I<C<uri>> value can contain variables.
+
+
+
+
+
+Several C<http2_push> directives
+can be specified on the same configuration level.
+The C<off> parameter cancels the effect
+of the C<http2_push> directives
+inherited from the previous configuration level.
+
+
+
+
+
+
+
+=head2 http2_push_preload
+
+
+B<syntax:> http2_push_preload I<C<on> E<verbar> C<off>>
+
+
+B<default:> I<off>
+
+
+B<context:> I<http>
+
+
+B<context:> I<server>
+
+
+B<context:> I<location>
+
+
+
+This directive appeared in version 1.13.9.
+
+
+
+
+
+
+B<NOTE>
+
+This directive is obsolete since version 1.25.1.
+
+
+
+
+
+
+Enables automatic conversion of
+L<preload
+links|https://www.w3.org/TR/preload/#server-push-http-2>
+specified in the C<Link> response header fields into
+L<push|https://datatracker.ietf.org/doc/html/rfc9113#section-8.4>
+requests.
 
 
 
@@ -330,6 +580,18 @@ B<context:> I<http>
 
 
 B<context:> I<server>
+
+
+
+
+
+
+B<NOTE>
+
+This directive is obsolete since version 1.19.7.
+The L<ngx_http_core_module>
+directive should be used instead.
+
 
 
 

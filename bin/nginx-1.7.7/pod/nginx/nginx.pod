@@ -25,13 +25,19 @@ L<install>
 
 =item *
 
+L<configure>
+
+
+
+=item *
+
 L<beginners_guide>
 
 
 
 =item *
 
-L<Admin’s Guide|https://www.nginx.com/resources/admin-guide/>
+L<Admin’s Guide|https://docs.nginx.com/nginx/admin-guide/>
 
 
 
@@ -80,6 +86,12 @@ L<switches>
 =item *
 
 L<windows>
+
+
+
+=item *
+
+L<quic>
 
 
 
@@ -145,7 +157,7 @@ L<stream_processing>
 
 =item *
 
-L<njs_about>
+L<Scripting with njs|index>
 
 
 
@@ -185,19 +197,13 @@ L<Chapter “nginx” in
 
 =item *
 
-L<configure>
-
-
-
-=item *
-
 L<howto_build_on_win32>
 
 
 
 =item *
 
-L<Setting up NGINX Plus environment on Amazon EC2|https://www.nginx.com/resources/admin-guide/setting-nginx-plus-environment-amazon-ec2/>
+L<Installing NGINX Plus AMIs on Amazon EC2|https://docs.nginx.com/nginx/admin-guide/installing-nginx/installing-nginx-plus-amazon-web-services/>
 
 
 
@@ -425,6 +431,12 @@ L<ngx_http_geoip_module|ngx_http_geoip_module>
 
 =item *
 
+L<ngx_http_grpc_module|ngx_http_grpc_module>
+
+
+
+=item *
+
 L<ngx_http_gunzip_module|ngx_http_gunzip_module>
 
 
@@ -462,6 +474,12 @@ L<ngx_http_image_filter_module|ngx_http_image_filter_module>
 =item *
 
 L<ngx_http_index_module|ngx_http_index_module>
+
+
+
+=item *
+
+L<ngx_http_internal_redirect_module|ngx_http_internal_redirect_module>
 
 
 
@@ -533,6 +551,12 @@ L<ngx_http_proxy_module|ngx_http_proxy_module>
 
 =item *
 
+L<ngx_http_proxy_protocol_vendor_module|ngx_http_proxy_protocol_vendor_module>
+
+
+
+=item *
+
 L<ngx_http_random_index_module|ngx_http_random_index_module>
 
 
@@ -576,12 +600,6 @@ L<ngx_http_session_log_module|ngx_http_session_log_module>
 =item *
 
 L<ngx_http_slice_module|ngx_http_slice_module>
-
-
-
-=item *
-
-L<ngx_http_spdy_module|ngx_http_spdy_module>
 
 
 
@@ -659,6 +677,12 @@ L<ngx_http_v2_module|ngx_http_v2_module>
 
 =item *
 
+L<ngx_http_v3_module|ngx_http_v3_module>
+
+
+
+=item *
+
 L<ngx_http_xslt_module|ngx_http_xslt_module>
 
 
@@ -692,6 +716,12 @@ L<ngx_mail_auth_http_module|ngx_mail_auth_http_module>
 =item *
 
 L<ngx_mail_proxy_module|ngx_mail_proxy_module>
+
+
+
+=item *
+
+L<ngx_mail_realip_module|ngx_mail_realip_module>
 
 
 
@@ -765,6 +795,12 @@ L<ngx_stream_js_module|ngx_stream_js_module>
 
 =item *
 
+L<ngx_stream_keyval_module|ngx_stream_keyval_module>
+
+
+
+=item *
+
 L<ngx_stream_limit_conn_module|ngx_stream_limit_conn_module>
 
 
@@ -783,7 +819,31 @@ L<ngx_stream_map_module|ngx_stream_map_module>
 
 =item *
 
+L<ngx_stream_mqtt_preread_module|ngx_stream_mqtt_preread_module>
+
+
+
+=item *
+
+L<ngx_stream_mqtt_filter_module|ngx_stream_mqtt_filter_module>
+
+
+
+=item *
+
+L<ngx_stream_pass_module|ngx_stream_pass_module>
+
+
+
+=item *
+
 L<ngx_stream_proxy_module|ngx_stream_proxy_module>
+
+
+
+=item *
+
+L<ngx_stream_proxy_protocol_vendor_module|ngx_stream_proxy_protocol_vendor_module>
 
 
 
@@ -796,6 +856,12 @@ L<ngx_stream_realip_module|ngx_stream_realip_module>
 =item *
 
 L<ngx_stream_return_module|ngx_stream_return_module>
+
+
+
+=item *
+
+L<ngx_stream_set_module|ngx_stream_set_module>
 
 
 
@@ -829,6 +895,12 @@ L<ngx_stream_upstream_hc_module|ngx_stream_upstream_hc_module>
 
 
 
+=item *
+
+L<ngx_stream_zone_sync_module|ngx_stream_zone_sync_module>
+
+
+
 =back
 
 
@@ -846,6 +918,32 @@ L<ngx_stream_upstream_hc_module|ngx_stream_upstream_hc_module>
 =item *
 
 L<ngx_google_perftools_module|ngx_google_perftools_module>
+
+
+
+=item *
+
+L<ngx_mgmt_module|ngx_mgmt_module>
+
+
+
+=back
+
+
+
+
+
+
+
+
+=over
+
+
+
+
+=item *
+
+L<ngx_otel_module|ngx_otel_module>
 
 
 

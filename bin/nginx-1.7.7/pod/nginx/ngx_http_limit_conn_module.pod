@@ -20,7 +20,7 @@ particular, the number of connections from a single IP address.
 
 
 Not all connections are counted.
-A connection is counted only if it has a request processed by the server
+A connection is counted only if it has a request being processed by the server
 and the whole request header has already been read.
 
 
@@ -91,7 +91,8 @@ allow only one connection per an IP address at a time.
 
 B<NOTE>
 
-In HTTPE<sol>2 and SPDY, each concurrent request is considered a separate connection.
+In HTTPE<sol>2 and HTTPE<sol>3,
+each concurrent request is considered a separate connection.
 
 
 
@@ -120,10 +121,45 @@ the total number of connections to the virtual server:
 
 
 
-These directives are inherited from the previous level if and
-only if there are no
-C<limit_conn>
-directives on the current level.
+These directives are inherited from the previous configuration level
+if and only if there are no C<limit_conn> directives
+defined on the current level.
+
+
+
+
+
+
+
+=head2 limit_conn_dry_run
+
+
+B<syntax:> limit_conn_dry_run I<C<on> E<verbar> C<off>>
+
+
+B<default:> I<off>
+
+
+B<context:> I<http>
+
+
+B<context:> I<server>
+
+
+B<context:> I<location>
+
+
+
+This directive appeared in version 1.17.6.
+
+
+
+
+
+Enables the dry run mode.
+In this mode, the number of connections is not limited, however,
+in the shared memory zone, the number of excessive connections is accounted
+as usual.
 
 
 
@@ -256,6 +292,23 @@ to all further requests.
 
 
 
+B<NOTE>
+
+Additionally, as part of our
+commercial subscription,
+the
+L<status information|ngx_http_api_module>
+for each such shared memory zone can be
+L<obtained|ngx_http_api_module> or
+L<reset|ngx_http_api_module>
+with the L<API|ngx_http_api_module> since 1.17.7.
+
+
+
+
+
+
+
 
 =head2 limit_zone
 
@@ -285,6 +338,35 @@ I<C<$variable>>
 C<zone>=I<C<name>>:I<C<size>>;
 
 
+
+
+
+
+
+
+=head1 Embedded Variables
+
+
+
+
+=over
+
+
+
+=item C<$limit_conn_status>
+
+
+
+
+keeps the result of limiting the number of connections (1.17.6):
+C<PASSED>,
+C<REJECTED>, or
+C<REJECTED_DRY_RUN>
+
+
+
+
+=back
 
 
 

@@ -3,13 +3,14 @@
 
 local ffi = require 'ffi'
 local base = require "resty.core.base"
-base.allows_subsystem("http")
 local utils = require "resty.core.utils"
 
 
+local subsystem = ngx.config.subsystem
 local FFI_BAD_CONTEXT = base.FFI_BAD_CONTEXT
 local FFI_DECLINED = base.FFI_DECLINED
 local FFI_OK = base.FFI_OK
+local clear_tab = base.clear_tab
 local new_tab = base.new_tab
 local C = ffi.C
 local ffi_cast = ffi.cast
@@ -19,6 +20,7 @@ local get_string_buf = base.get_string_buf
 local get_size_ptr = base.get_size_ptr
 local setmetatable = setmetatable
 local lower = string.lower
+local find = string.find
 local rawget = rawget
 local ngx = ngx
 local get_request = base.get_request
@@ -27,6 +29,50 @@ local error = error
 local tostring = tostring
 local tonumber = tonumber
 local str_replace_char = utils.str_replace_char
+
+
+local _M = {
+    version = base.version
+}
+
+
+local ngx_lua_ffi_req_start_time
+
+
+if subsystem == "stream" then
+    ffi.cdef[[
+    double ngx_stream_lua_ffi_req_start_time(ngx_stream_lua_request_t *r);
+    ]]
+
+    ngx_lua_ffi_req_start_time = C.ngx_stream_lua_ffi_req_start_time
+
+elseif subsystem == "http" then
+    ffi.cdef[[
+    double ngx_http_lua_ffi_req_start_time(ngx_http_request_t *r);
+    ]]
+
+    ngx_lua_ffi_req_start_time = C.ngx_http_lua_ffi_req_start_time
+end
+
+
+function ngx.req.start_time()
+    local r = get_request()
+    if not r then
+        error("no request found")
+    end
+
+    return tonumber(ngx_lua_ffi_req_start_time(r))
+end
+
+
+if subsystem == "stream" then
+    return _M
+end
+
+
+local errmsg = base.get_errmsg_ptr()
+local ffi_str_type = ffi.typeof("ngx_http_lua_ffi_str_t*")
+local ffi_str_size = ffi.sizeof("ngx_http_lua_ffi_str_t")
 
 
 ffi.cdef[[
@@ -49,8 +95,6 @@ ffi.cdef[[
     int ngx_http_lua_ffi_req_get_uri_args(ngx_http_request_t *r,
         unsigned char *buf, ngx_http_lua_ffi_table_elt_t *out, int count);
 
-    double ngx_http_lua_ffi_req_start_time(ngx_http_request_t *r);
-
     int ngx_http_lua_ffi_req_get_method(ngx_http_request_t *r);
 
     int ngx_http_lua_ffi_req_get_method_name(ngx_http_request_t *r,
@@ -58,9 +102,10 @@ ffi.cdef[[
 
     int ngx_http_lua_ffi_req_set_method(ngx_http_request_t *r, int method);
 
-    int ngx_http_lua_ffi_req_header_set_single_value(ngx_http_request_t *r,
+    int ngx_http_lua_ffi_req_set_header(ngx_http_request_t *r,
         const unsigned char *key, size_t key_len, const unsigned char *value,
-        size_t value_len);
+        size_t value_len, ngx_http_lua_ffi_str_t *mvals, size_t mvals_len,
+        int override, char **errmsg);
 ]]
 
 
@@ -70,7 +115,12 @@ local truncated = ffi.new("int[1]")
 
 local req_headers_mt = {
     __index = function (tb, key)
-        return rawget(tb, (str_replace_char(lower(key), '_', '-')))
+        key = lower(key)
+        local value = rawget(tb, key)
+        if value == nil and find(key, '_', 1, true) then
+            value = rawget(tb, (str_replace_char(key, '_', '-')))
+        end
+        return value
     end
 }
 
@@ -98,7 +148,12 @@ function ngx.req.get_headers(max_headers, raw)
     end
 
     if n == 0 then
-        return {}
+        local headers = {}
+        if raw == 0 then
+            headers = setmetatable(headers, req_headers_mt)
+        end
+
+        return headers
     end
 
     local raw_buf = get_string_buf(n * table_elt_size)
@@ -144,7 +199,7 @@ function ngx.req.get_headers(max_headers, raw)
 end
 
 
-function ngx.req.get_uri_args(max_args)
+function ngx.req.get_uri_args(max_args, tab)
     local r = get_request()
     if not r then
         error("no request found")
@@ -154,13 +209,17 @@ function ngx.req.get_uri_args(max_args)
         max_args = -1
     end
 
+    if tab then
+        clear_tab(tab)
+    end
+
     local n = C.ngx_http_lua_ffi_req_get_uri_args_count(r, max_args, truncated)
     if n == FFI_BAD_CONTEXT then
         error("API disabled in the current context", 2)
     end
 
     if n == 0 then
-        return {}
+        return tab or {}
     end
 
     local args_len = C.ngx_http_lua_ffi_req_get_querystring_len(r)
@@ -170,7 +229,7 @@ function ngx.req.get_uri_args(max_args)
 
     local nargs = C.ngx_http_lua_ffi_req_get_uri_args(r, strbuf, kvbuf, n)
 
-    local args = new_tab(0, nargs)
+    local args = tab or new_tab(0, nargs)
     for i = 0, nargs - 1 do
         local arg = kvbuf[i]
 
@@ -203,16 +262,6 @@ function ngx.req.get_uri_args(max_args)
     end
 
     return args
-end
-
-
-function ngx.req.start_time()
-    local r = get_request()
-    if not r then
-        error("no request found")
-    end
-
-    return tonumber(C.ngx_http_lua_ffi_req_start_time(r))
 end
 
 
@@ -294,16 +343,14 @@ end
 
 
 do
-    local orig_func = ngx.req.set_header
-
-    function ngx.req.set_header(name, value)
-        if type(value) == "table" then
-            return orig_func(name, value)
-        end
-
+    local function set_req_header(name, value, override)
         local r = get_request()
         if not r then
-            error("no request found")
+            error("no request found", 3)
+        end
+
+        if name == nil then
+            error("bad 'name' argument: string expected, got nil", 3)
         end
 
         if type(name) ~= "string" then
@@ -311,17 +358,57 @@ do
         end
 
         local rc
-        if not value then
-            rc = C.ngx_http_lua_ffi_req_header_set_single_value(r, name,
-                                                         #name, nil, 0)
 
-        else
-            if type(value) ~= "string" then
-                value = tostring(value)
+        if value == nil then
+            if not override then
+                error("bad 'value' argument: string or table expected, got nil",
+                      3)
             end
 
-            rc = C.ngx_http_lua_ffi_req_header_set_single_value(r, name,
-                                                         #name, value, #value)
+            rc = C.ngx_http_lua_ffi_req_set_header(r, name, #name, nil, 0, nil,
+                                                   0, 1, errmsg)
+
+        else
+            local sval, sval_len, mvals, mvals_len, buf
+            local value_type = type(value)
+
+            if value_type == "table" then
+                mvals_len = #value
+                if mvals_len == 0 and not override then
+                    error("bad 'value' argument: non-empty table expected", 3)
+                end
+
+                buf = get_string_buf(ffi_str_size * mvals_len)
+                mvals = ffi_cast(ffi_str_type, buf)
+
+                for i = 1, mvals_len do
+                    local s = value[i]
+                    if type(s) ~= "string" then
+                        s = tostring(s)
+                        value[i] = s
+                    end
+
+                    local str = mvals[i - 1]
+                    str.data = s
+                    str.len = #s
+                end
+
+                sval_len = 0
+
+            else
+                if value_type ~= "string" then
+                    sval = tostring(value)
+                else
+                    sval = value
+                end
+
+                sval_len = #sval
+                mvals_len = 0
+            end
+
+            rc = C.ngx_http_lua_ffi_req_set_header(r, name, #name, sval,
+                                                   sval_len, mvals, mvals_len,
+                                                   override and 1 or 0, errmsg)
         end
 
         if rc == FFI_OK or rc == FFI_DECLINED then
@@ -329,10 +416,19 @@ do
         end
 
         if rc == FFI_BAD_CONTEXT then
-            error("API disabled in the current context", 2)
+            error("API disabled in the current context", 3)
         end
 
-        error("error")
+        -- rc == FFI_ERROR
+        error(ffi_str(errmsg[0]))
+    end
+
+
+    _M.set_req_header = set_req_header
+
+
+    function ngx.req.set_header(name, value)
+        set_req_header(name, value, true) -- override
     end
 end  -- do
 
@@ -347,8 +443,8 @@ function ngx.req.clear_header(name)
         name = tostring(name)
     end
 
-    local rc = C.ngx_http_lua_ffi_req_header_set_single_value(r, name, #name,
-                                                                       nil, 0)
+    local rc = C.ngx_http_lua_ffi_req_set_header(r, name, #name, nil, 0, nil, 0,
+                                                 1, errmsg)
 
     if rc == FFI_OK or rc == FFI_DECLINED then
         return
@@ -358,10 +454,9 @@ function ngx.req.clear_header(name)
         error("API disabled in the current context", 2)
     end
 
-    error("error")
+    -- rc == FFI_ERROR
+    error(ffi_str(errmsg[0]))
 end
 
 
-return {
-    version = base.version
-}
+return _M

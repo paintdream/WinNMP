@@ -65,7 +65,7 @@ B<context:> I<server>
 
 Sets the path, format,
 and configuration for a buffered log write.
-Several logs can be specified on the same level.
+Several logs can be specified on the same configuration level.
 Logging to L<syslog|syslog>
 can be configured by specifying
 the “C<syslog:>” prefix in the first parameter.
@@ -214,7 +214,7 @@ or an empty string.
 
 B<syntax:> log_format I<
     I<C<name>>
-    [C<escape>=C<default>E<verbar>C<json>]
+    [C<escape>=C<default>E<verbar>C<json>E<verbar>C<none>]
     I<C<string>> ...>
 
 
@@ -244,6 +244,37 @@ Specifies the log format, for example:
 The C<escape> parameter (1.11.8) allows setting
 C<json> or C<default> characters escaping
 in variables, by default, C<default> escaping is used.
+The C<none> parameter (1.13.10) disables escaping.
+
+
+
+
+
+For C<default> escaping,
+characters “C<">”, “C<\>”,
+and other characters with values less than 32 or above 126
+are escaped as “C<\xXX>”.
+If the variable value is not found,
+a hyphen (“C<->”) will be logged.
+
+
+
+
+
+For C<json> escaping,
+all characters not allowed
+in JSON L<strings|https://datatracker.ietf.org/doc/html/rfc8259#section-7>
+will be escaped:
+characters “C<">” and
+“C<\>” are escaped as
+“C<\">” and “C<\\>”,
+characters with values less than 32 are escaped as
+“C<\n>”,
+“C<\r>”,
+“C<\t>”,
+“C<\b>”,
+“C<\f>”, or
+“C<\u00XX>”.
 
 
 

@@ -126,9 +126,13 @@ local brshift = bit.rshift
 local bxor = bit.bxor
 local band = bit.band
 
-local ok, tab_new = pcall(require, "table.new")
-if not ok then
-    tab_new = function (narr, nrec) return {} end
+local new_tab
+do
+    local ok
+    ok, new_tab = pcall(require, "table.new")
+    if not ok then
+        new_tab = function(narr, nrec) return {} end
+    end
 end
 
 -- queue data types
@@ -156,14 +160,16 @@ ffi.cdef[[
          * Intuitively, we can view the "id" as the identifier of key/value
          * pair.
          */
-        int                id;
+        int                        id;
 
         /* The bucket of the hash-table is implemented as a singly-linked list.
          * The "conflict" refers to the ID of the next node in the bucket.
          */
-        int                conflict;
+        int                        conflict;
 
-        double             expire;  /* in seconds */
+        uint32_t                   user_flags;
+
+        double                     expire;  /* in seconds */
 
         lrucache_pureffi_queue_t  *prev;
         lrucache_pureffi_queue_t  *next;
@@ -213,6 +219,7 @@ local function queue_init(size)
         for i = 1, size do
           local e = q[i]
           e.id = i
+          e.user_flags = 0
           prev.next = e
           e.prev = prev
           prev = e
@@ -300,7 +307,7 @@ end
 --========================================================================
 
 local _M = {
-    _VERSION = '0.09'
+    _VERSION = '0.13'
 }
 local mt = { __index = _M }
 
@@ -339,11 +346,12 @@ function _M.new(size, load_factor)
         free_queue = queue_init(size),
         cache_queue = queue_init(0),
         node_v = nil,
-        key_v = tab_new(size, 0),
-        val_v = tab_new(size, 0),
-        bucket_v = ffi_new(int_array_t, bucket_sz)
+        key_v = new_tab(size, 0),
+        val_v = new_tab(size, 0),
+        bucket_v = ffi_new(int_array_t, bucket_sz),
+        num_items = 0,
     }
-    -- "note_v" is an array of all the nodes used in the LRU queue. Exprpession
+    -- "node_v" is an array of all the nodes used in the LRU queue. Exprpession
     -- node_v[i] evaluates to the element of ID "i".
     self.node_v = self.free_queue
 
@@ -354,6 +362,16 @@ function _M.new(size, load_factor)
     ffi_fill(self.bucket_v, ffi_sizeof(int_t, bucket_sz), 0)
 
     return setmetatable(self, mt)
+end
+
+
+function _M.count(self)
+    return self.num_items
+end
+
+
+function _M.capacity(self)
+    return self.size
 end
 
 
@@ -418,6 +436,7 @@ local function remove_key(self, key)
         -- In an attempt to make key and val dead.
         key_v[cur] = nil
         val_v[cur] = nil
+        self.num_items = self.num_items - 1
 
         -- Remove the node from the hash table
         local next_node = node_v[cur].conflict
@@ -447,6 +466,7 @@ local function insert_key(self, key, val, node)
     local bucket_v = self.bucket_v
     node.conflict = bucket_v[key_hash]
     bucket_v[key_hash] = node_id
+    self.num_items = self.num_items + 1
 end
 
 
@@ -469,10 +489,10 @@ function _M.get(self, key)
     local expire = node.expire
     if expire >= 0 and expire < ngx_now() then
         -- print("expired: ", node.expire, " > ", ngx_now())
-        return nil, self.val_v[node_id]
+        return nil, self.val_v[node_id], node.user_flags
     end
 
-    return self.val_v[node_id]
+    return self.val_v[node_id], nil, node.user_flags
 end
 
 
@@ -493,7 +513,7 @@ function _M.delete(self, key)
 end
 
 
-function _M.set(self, key, value, ttl)
+function _M.set(self, key, value, ttl, flags)
     if type(key) ~= "string" then
         key = tostring(key)
     end
@@ -528,6 +548,44 @@ function _M.set(self, key, value, ttl)
     else
         node.expire = -1
     end
+
+    if type(flags) == "number" and flags >= 0 then
+        node.user_flags = flags
+
+    else
+        node.user_flags = 0
+    end
+end
+
+
+function _M.get_keys(self, max_count, res)
+    if not max_count or max_count == 0 then
+        max_count = self.num_items
+    end
+
+    if not res then
+        res = new_tab(max_count + 1, 0) -- + 1 for trailing hole
+    end
+
+    local cache_queue = self.cache_queue
+    local key_v = self.key_v
+
+    local i = 0
+    local node = queue_head(cache_queue)
+
+    while node ~= cache_queue do
+        if i >= max_count then
+            break
+        end
+
+        i = i + 1
+        res[i] = key_v[node.id]
+        node = node.next
+    end
+
+    res[i + 1] = nil
+
+    return res
 end
 
 

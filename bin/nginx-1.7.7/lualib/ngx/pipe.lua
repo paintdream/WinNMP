@@ -5,12 +5,15 @@ local base = require "resty.core.base"
 base.allows_subsystem("http")
 
 
+require "resty.core.phase"  -- for ngx.get_phase
+
 local assert = assert
 local error = error
 local ipairs = ipairs
 local tonumber = tonumber
 local tostring = tostring
 local type = type
+local str_find = string.find
 local table_concat = table.concat
 local ffi = require "ffi"
 local C = ffi.C
@@ -44,9 +47,10 @@ typedef struct {
     ngx_http_lua_pipe_t    *pipe;
 } ngx_http_lua_ffi_pipe_proc_t;
 
-int ngx_http_lua_ffi_pipe_spawn(ngx_http_lua_ffi_pipe_proc_t *proc,
+int ngx_http_lua_ffi_pipe_spawn(ngx_http_request_t *r,
+    ngx_http_lua_ffi_pipe_proc_t *proc,
     const char *file, const char **argv, int merge_stderr, size_t buffer_size,
-    u_char *errbuf, size_t *errbuf_size);
+    const char **environ, u_char *errbuf, size_t *errbuf_size);
 
 int ngx_http_lua_ffi_pipe_proc_read(ngx_http_request_t *r,
     ngx_http_lua_ffi_pipe_proc_t *proc, int from_stderr, int reader_type,
@@ -118,17 +122,15 @@ do
                 if timeout > MAX_TIMEOUT then
                     error("bad timeout value", 3)
                 end
-
                 proc[attr] = timeout
             end
         end
-
         set_timeout(...)
         ]]
 
         if write_timeout then
             if write_timeout < 0 or MAX_TIMEOUT < write_timeout then
-                error("bad timeout value", 2)
+                error("bad write_timeout option", 3)
             end
 
             proc.write_timeout = write_timeout
@@ -136,7 +138,7 @@ do
 
         if stdout_read_timeout then
             if stdout_read_timeout < 0 or MAX_TIMEOUT < stdout_read_timeout then
-                error("bad timeout value", 2)
+                error("bad stdout_read_timeout option", 3)
             end
 
             proc.stdout_read_timeout = stdout_read_timeout
@@ -144,7 +146,7 @@ do
 
         if stderr_read_timeout then
             if stderr_read_timeout < 0 or MAX_TIMEOUT < stderr_read_timeout then
-                error("bad timeout value", 2)
+                error("bad stderr_read_timeout option", 3)
             end
 
             proc.stderr_read_timeout = stderr_read_timeout
@@ -152,7 +154,7 @@ do
 
         if wait_timeout then
             if wait_timeout < 0 or MAX_TIMEOUT < wait_timeout then
-                error("bad timeout value", 2)
+                error("bad wait_timeout option", 3)
             end
 
             proc.wait_timeout = wait_timeout
@@ -163,7 +165,7 @@ end
 
 local function check_proc_instance(proc)
     if type(proc) ~= "cdata" then
-        error("not a process instance", 2)
+        error("not a process instance", 3)
     end
 end
 
@@ -417,7 +419,11 @@ local mt = {
             return proc._pid
         end,
 
-        set_timeouts = proc_set_timeouts,
+        set_timeouts = function (proc, write_timeout, stdout_read_timeout,
+                                 stderr_read_timeout, wait_timeout)
+            proc_set_timeouts(proc, write_timeout, stdout_read_timeout,
+                              stderr_read_timeout, wait_timeout)
+        end,
 
         stdout_read_all = function (proc)
             local data, err, partial = proc_read(proc, 0, PIPE_READ_ALL, 0)
@@ -509,6 +515,11 @@ do
     shell_args[1] = opt_c
     shell_args[3] = nil
 
+    local write_timeout = 10000
+    local stdout_read_timeout = 10000
+    local stderr_read_timeout = 10000
+    local wait_timeout = 10000
+
     -- reference shell cmd's constant strings here to prevent them from getting
     -- collected by the Lua GC.
     _M._gc_ref_c_opt = opt_c
@@ -520,16 +531,13 @@ do
 
         local exe
         local proc_args
+        local proc_envs
 
         local args_type = type(args)
         if args_type == "table" then
             local nargs = 0
 
             for i, arg in ipairs(args)  do
-                if arg == nil then
-                    break
-                end
-
                 nargs = nargs + 1
 
                 if type(arg) ~= "string" then
@@ -556,6 +564,8 @@ do
 
         local merge_stderr = 0
         local buffer_size = 4096
+        local proc = Proc()
+
         if opts then
             merge_stderr = opts.merge_stderr and 1 or 0
 
@@ -566,15 +576,60 @@ do
                     error("bad buffer_size option", 2)
                 end
             end
+
+            if opts.environ then
+                local environ = opts.environ
+                local environ_type = type(environ)
+                if environ_type ~= "table" then
+                    error("bad environ option: table expected, got " ..
+                          environ_type, 2)
+                end
+
+                local nenv = 0
+
+                for i, env in ipairs(environ) do
+                    nenv = nenv + 1
+
+                    local env_type = type(env)
+                    if env_type ~= "string" then
+                        error("bad value at index " .. i .. " of environ " ..
+                              "option: string expected, got " .. env_type, 2)
+                    end
+
+                    if not str_find(env, "=", 2, true) then
+                        error("bad value at index " .. i .. " of environ " ..
+                              "option: 'name=[value]' format expected, got '" ..
+                              env .. "'", 2)
+                    end
+                end
+
+                if nenv > 0 then
+                    proc_envs = ffi_new("const char* [?]", nenv + 1, environ)
+                    proc_envs[nenv] = nil
+                end
+            end
+
+            proc_set_timeouts(proc,
+                              opts.write_timeout or write_timeout,
+                              opts.stdout_read_timeout or stdout_read_timeout,
+                              opts.stderr_read_timeout or stderr_read_timeout,
+                              opts.wait_timeout or wait_timeout)
+
+        else
+            proc_set_timeouts(proc,
+                              write_timeout,
+                              stdout_read_timeout,
+                              stderr_read_timeout,
+                              wait_timeout)
         end
 
-        local proc = Proc()
         local errbuf = get_string_buf(ERR_BUF_SIZE)
         local errbuf_size = get_size_ptr()
+        local r = get_request()
         errbuf_size[0] = ERR_BUF_SIZE
-        local rc = C.ngx_http_lua_ffi_pipe_spawn(proc, exe, proc_args,
+        local rc = C.ngx_http_lua_ffi_pipe_spawn(r, proc, exe, proc_args,
                                                  merge_stderr, buffer_size,
-                                                 errbuf, errbuf_size)
+                                                 proc_envs, errbuf, errbuf_size)
         if rc == FFI_ERROR then
             return nil, ffi_str(errbuf, errbuf_size[0])
         end

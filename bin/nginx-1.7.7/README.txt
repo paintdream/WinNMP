@@ -1,9 +1,27 @@
 Name
-    README-win32 - README for the Windows 32-bit build of OpenResty
+    README-windows - README for the official 32-bit and 64-bit Windows
+    builds of OpenResty
+
+Table of Contents
+    *   Name
+
+    *   Description
+
+    *   Debugging
+
+    *   Caveats
+
+    *   TODO
+
+    *   "Details About The Building Process"
+
+    *   Author
+
+    *   "Copyright & License"
 
 Description
-    The official binary Win32 distribution of OpenResty can be downloaded
-    from the following web page:
+    The official binary Win32 and Win64 distributions of OpenResty can be
+    downloaded from the following web page:
 
     https://openresty.org/en/download.html
 
@@ -31,7 +49,7 @@ Description
     One of the two processes is the master process while the other is the
     worker.
 
-    If you are using the MSYS bash instead of the "cmd.exe" console, then
+    If you are using the MSYS2 bash instead of the "cmd.exe" console, then
     you should replace the "/fi" option with "-fi" in the command above
     instead.
 
@@ -52,7 +70,7 @@ Description
     "tasklist" command.
 
     Again, you should use the form "-pid" and "-F" for the options if you
-    are in an MSYS bash session.
+    are in an MSYS2 bash session.
 
     Similarly, you can use the "nginx -s reload" command to reload nginx
     configurations without stopping the server. And you can use "nginx -s
@@ -66,23 +84,23 @@ Description
     The "resty" command-line utility requires a Perl interpreter installed
     in your system and visible to your PATH environment. Any perl
     distributions should work, including StrawberryPerl, ActivePerl, and
-    MSYS perl (the former two are recommended though).
+    MSYS2 perl. recommended though).
 
 Debugging
-    Debug symbosl are enabled even in release builds. So that when things go
-    very wrong, one can still debug things with tools like MSYS GDB.
+    Debug symbols are enabled even in release builds. So that when things go
+    very wrong, one can still debug things with tools like MSYS2 GDB.
 
     Inclusion of debug symbols make the binary files (".exe" and ".dll"
     files) much larger, but it generally will not load into memory during
     normal execution on a modern operating system.
 
 Caveats
-    The Win32 port of the NGINX core supports the good old "select" IO
+    The Win32/Win64 port of the NGINX core supports the good old "select" IO
     multiplexing mechanism only. The I/O Completion Ports (IOCP) feature is
     *not* supported (yet). So do not use this build for production
     environments with very high concurrency levels.
 
-    This Win32 build of OpenResty is mainly for developers who want to
+    This Win32/Win64 build of OpenResty is mainly for developers who want to
     develop their applications in native Windows environment (though they
     eventually push the finished work onto a Linux or *BSD box, most of the
     time).
@@ -98,23 +116,23 @@ TODO
     *   Bundle StrawberryPerl to make command-line utilities like "resty"
         work out of the box (without manually installing a Perl).
 
-    *   Deliver an alternative Win32 binary package built with best debuggin
-        capabilities (like enabling NGINX debugging logs, disabling C
-        compiler optimizations, and enabling all the assertions and checks).
-
-    *   Deliver binary packages for 64-bit Windows (Win64).
+    *   Deliver an alternative Win32/Win64 binary package built with best
+        debugging capabilities (like enabling NGINX debugging logs,
+        disabling C compiler optimizations, and enabling all the assertions
+        and checks).
 
 Details About The Building Process
-    Usually you do not need to worry about how the Win32 binaries were built
-    on the maintainers'' side. But if you do, please read on.
+    Usually you do not need to worry about how the Win32/Win64 binaries were
+    built on the maintainers'' side. But if you do, please read on.
 
-    The Win32 build of OpenResty is currently built via the MinGW/MSYS
-    toolchain, including MinGW gcc 4.8.1, MSYS perl, MSYS bash, MSYS make,
-    and etc. Basically, it is currently built via the following cmmands:
+    The Win32/Win64 build of OpenResty is currently built via the
+    MSYS2/MinGW toolchain, including MinGW gcc 7.2.3, MSYS2 perl 5.24.4,
+    MSYS2 bash, MSYS2 make, and etc. Basically, it is currently built via
+    the following commands:
 
-        PCRE=pcre-8.39
-        ZLIB=zlib-1.2.8
-        OPENSSL=openssl-1.0.2j
+        PCRE=pcre-8.42
+        ZLIB=zlib-1.2.11
+        OPENSSL=openssl-1.1.0h
     
         mkdir -p objs/lib || exit 1
         cd objs/lib || exit 1
@@ -125,7 +143,7 @@ Details About The Building Process
         cd ../..
     
         cd objs/lib/$OPENSSL || exit 1
-        patch -p1 < ../../../patches/openssl-1.0.2h-sess_set_get_cb_yield.patch || exit 1
+        patch -p1 < ../../../patches/openssl-1.1.0d-sess_set_get_cb_yield.patch || exit 1
         cd ../../..
     
         ./configure \
@@ -141,6 +159,7 @@ Details About The Building Process
             --with-ipv6 \
             --with-stream \
             --with-stream_ssl_module \
+            --with-stream_ssl_preread_module \
             --with-http_v2_module \
             --without-mail_pop3_module \
             --without-mail_imap_module \
@@ -162,9 +181,9 @@ Details About The Building Process
             --with-pcre=objs/lib/$PCRE \
             --with-zlib=objs/lib/$ZLIB \
             --with-openssl=objs/lib/$OPENSSL \
-            -j5 || exit 1
+            -j9 || exit 1
     
-        make
+        make -j9
         make install
 
     where the dependency library source tarballs for OpenSSL, Zlib, and PCRE
@@ -189,7 +208,7 @@ Author
 Copyright & License
     This module is licensed under the BSD license.
 
-    Copyright (C) 2015-2016, by Yichun "agentzh" Zhang (章亦春)
+    Copyright (C) 2015-2019, by Yichun "agentzh" Zhang (章亦春)
     <agentzh@gmail.com>, OpenResty Inc.
 
     All rights reserved.

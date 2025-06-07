@@ -7,22 +7,6 @@
 freebsd_tuning - Tuning FreeBSD for the highload
 
 
-=head1 Syncache and syncookies
-
-
-
-We look at how various kernel settings affect ability of the kernel
-to process requests. LetE<rsquo>s start with TCPE<sol>IP connection establishment.
-
-
-
-
-
-[ syncache, syncookies ]
-
-
-
-
 =head1 Listen queues
 
 
@@ -62,7 +46,7 @@ the new connections. You may increase the limit using
 
 
     
-    sysctl kern.ipc.somaxconn=4096
+    sysctl kern.ipc.soacceptqueue=4096
 
 
 
@@ -78,35 +62,8 @@ You may also change the listen queue maximum size in nginx configuration:
 
 
 However, you may not set it more than the current
-F<kern.ipc.somaxconn> value.
+F<kern.ipc.soacceptqueue> value.
 By default nginx uses the maximum value of FreeBSD kernel.
-
-
-
-
-
-
-    
-
-
-
-
-
-
-
-
-    
-
-
-
-
-
-
-=head1 Sockets and files
-
-
-
-[ sockets, files ]
 
 
 
@@ -135,7 +92,7 @@ And on the Internet you may see recommendations to increase
 the buffer sizes to one or even several megabytes.
 However, such large buffer sizes are suitable for local networks
 or for networks under your control.
-Since on the Internet a slow modem client may ask a large file
+Since on the Internet a slow network client may ask a large file
 and then it will download the file during several minutes if not hours.
 All this time the megabyte buffer will be bound to the slow client,
 although we may devote just several kilobytes to it.
@@ -159,12 +116,6 @@ therefore it does not require the large buffer sizes.
 
 
 
-
-[ dynamic buffers ]
-
-
-
-
 =head1 mbufs, mbuf clusters, etc.
 
 
@@ -176,7 +127,7 @@ of data, for example, TCPE<sol>IP header. However, the mbufs point mostly
 to other data stored in the I<mbuf clusters> or I<jumbo clusters>,
 and in this kind they are used as the chain links only.
 The mbuf cluster size is 2K.
-The jumbo cluster size can be equal to a CPU page size (4K for i386 and amd64),
+The jumbo cluster size can be equal to a CPU page size (4K for amd64),
 9K, or 16K.
 The 9K and 16K jumbo clusters are used mainly in local networks with Ethernet
 frames larger than usual 1500 bytes, and they are beyond the scope of
@@ -237,25 +188,6 @@ All allocated page size jumbo clusters will take yet about 415M physical memory:
 And together they may take 845M.
 
 
-B<NOTE>
-
-The page size jumbo clusters have been introduced in FreeBSD 7.0.
-In earlier versions you should tune only 2K mbuf clusters.
-Prior to FreeBSD 6.2, the F<kern.ipc.nmbclusters> value can be
-set only on the boot time via loader tunable.
-
-
-
-
-
-
-On the amd64 architecture FreeBSD kernel can use for sockets buffers
-almost all physical memory,
-while on the i386 architecture no more than 2G memory can be used,
-regardless of the available physical memory.
-We will discuss the i386 specific tuning later.
-
-
 
 
 
@@ -272,21 +204,7 @@ and memory usage by using the cached file pages.
 
 
 
-
-And again, the amd64 sendfile implementation is the best:
-the zeros in the “C<netstat -m>” output
-
-    
-    ...
-    <b>0/0/0</b> sfbufs in use (current/peak/max)
-    ...
-
-
-mean that there is no I<sfbufs> limit,
-while on i386 architecture you should to tune them.
-
-
-=head1 Proxying
+=head1 Outgoing connections
 
 
     
@@ -302,30 +220,6 @@ while on i386 architecture you should to tune them.
 
     
     net.inet.tcp.fast_finwait2_recycle=1
-
-
-
-
-=head1 i386 specific tuning
-
-
-
-[ KVA, KVM, nsfbufs ]
-
-
-
-
-=head1 Minor optimizations
-
-
-
-
-
-    
-    sysctl kern.random.sys.harvest.ethernet=0
-
-
-
 
 
 

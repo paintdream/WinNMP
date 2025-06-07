@@ -35,7 +35,7 @@ L<OpenSSL|http://www.openssl.org> library.
 
 
 
-To reduce the processor load it is recommended to
+To reduce the processor load, it is recommended to
 
 =over
 
@@ -93,7 +93,7 @@ and possibly increase the session lifetime
             listen              443 ssl;
             <emphasis>keepalive_timeout   70;</emphasis>
     
-            ssl_protocols       TLSv1 TLSv1.1 TLSv1.2;
+            ssl_protocols       TLSv1.2 TLSv1.3;
             ssl_ciphers         AES128-SHA:AES256-SHA:RC4-SHA:DES-CBC3-SHA:RC4-MD5;
             ssl_certificate     /usr/local/nginx/conf/cert.pem;
             ssl_certificate_key /usr/local/nginx/conf/cert.key;
@@ -128,14 +128,11 @@ B<context:> I<server>
 
 
 
-Enables the HTTPS protocol for the given virtual server.
-
-B<NOTE>
-
-It is recommended to use the C<ssl> parameter of the
-L<ngx_http_core_module> directive instead
-of this directive.
-
+This directive was made obsolete in version 1.15.0
+and was removed in version 1.25.1.
+The C<ssl> parameter
+of the L<ngx_http_core_module> directive
+should be used instead.
 
 
 
@@ -246,10 +243,159 @@ With older versions, only one certificate chain can be used.
 
 
 
-It should be kept in mind that due to the HTTPS protocol limitations
-for maximum interoperability virtual servers should listen on
+Since version 1.15.9, variables can be used in the I<C<file>> name
+when using OpenSSL 1.0.2 or higher:
+
+    
+    ssl_certificate     $ssl_server_name.crt;
+    ssl_certificate_key $ssl_server_name.key;
+
+
+Note that using variables implies that
+a certificate will be loaded for each SSL handshake,
+and this may have a negative impact on performance.
+
+
+
+
+
+The value
+C<data>:I<C<$variable>>
+can be specified instead of the I<C<file>> (1.15.10),
+which loads a certificate from a variable
+without using intermediate files.
+Note that inappropriate use of this syntax may have its security implications,
+such as writing secret key data to
+L<error log|ngx_core_module>.
+
+
+
+
+
+It should be kept in mind that due to the SSLE<sol>TLS protocol limitations,
+for maximum interoperability with clients that do not use
+L<SNI|http://en.wikipedia.org/wiki/Server_Name_Indication>,
+virtual servers with different certificates should listen on
 L<different
 IP addresses|configuring_https_servers>.
+
+
+
+
+
+
+
+=head2 ssl_certificate_cache
+
+
+B<syntax:> ssl_certificate_cache I<C<off>>
+
+
+B<syntax:> ssl_certificate_cache I<
+    C<max>=I<C<N>>
+    [C<inactive>=I<C<time>>]
+    [C<valid>=I<C<time>>]>
+
+
+B<default:> I<off>
+
+
+B<context:> I<http>
+
+
+B<context:> I<server>
+
+
+
+This directive appeared in version 1.27.4.
+
+
+
+
+
+Defines a cache that stores
+SSL certificates and
+secret keys
+specified with variables.
+
+
+
+
+
+The directive has the following parameters:
+
+=over
+
+
+
+=item 
+C<max>
+
+
+
+
+
+sets the maximum number of elements in the cache;
+on cache overflow the least recently used (LRU) elements are removed;
+
+
+
+=item 
+C<inactive>
+
+
+
+
+
+defines a time after which an element is removed from the cache
+if it has not been accessed during this time;
+by default, it is 10 seconds;
+
+
+
+=item 
+C<valid>
+
+
+
+
+
+defines a time during which
+an element in the cache is considered valid
+and can be reused;
+by default, it is 60 seconds.
+Certificates that exceed this time will be reloaded or revalidated;
+
+
+
+=item 
+C<off>
+
+
+
+
+
+disables the cache.
+
+
+
+
+=back
+
+
+
+
+
+
+
+Example:
+
+    
+    ssl_certificate       $ssl_server_name.crt;
+    ssl_certificate_key   $ssl_server_name.key;
+    ssl_certificate_cache max=1000 inactive=20s valid=1m;
+
+
 
 
 
@@ -285,6 +431,25 @@ C<engine>:I<C<name>>:I<C<id>>
 can be specified instead of the I<C<file>> (1.7.9),
 which loads a secret key with a specified I<C<id>>
 from the OpenSSL engine I<C<name>>.
+
+
+
+
+
+The value
+C<data>:I<C<$variable>>
+can be specified instead of the I<C<file>> (1.15.10),
+which loads a secret key from a variable without using intermediate files.
+Note that inappropriate use of this syntax may have its security implications,
+such as writing secret key data to
+L<error log|ngx_core_module>.
+
+
+
+
+
+Since version 1.15.9, variables can be used in the I<C<file>> name
+when using OpenSSL 1.0.2 or higher.
 
 
 
@@ -378,6 +543,67 @@ directive can be used.
 
 
 
+=head2 ssl_conf_command
+
+
+B<syntax:> ssl_conf_command I<I<C<name>> I<C<value>>>
+
+
+
+B<context:> I<http>
+
+
+B<context:> I<server>
+
+
+
+This directive appeared in version 1.19.4.
+
+
+
+
+
+Sets arbitrary OpenSSL configuration
+L<commands|https://www.openssl.org/docs/man1.1.1/man3/SSL_CONF_cmd.html>.
+
+B<NOTE>
+
+The directive is supported when using OpenSSL 1.0.2 or higher.
+
+
+
+
+
+
+Several C<ssl_conf_command> directives
+can be specified on the same level:
+
+    
+    ssl_conf_command Options PrioritizeChaCha;
+    ssl_conf_command Ciphersuites TLS_CHACHA20_POLY1305_SHA256;
+
+
+These directives are inherited from the previous configuration level
+if and only if there are no C<ssl_conf_command> directives
+defined on the current level.
+
+
+
+
+
+
+B<NOTE>
+
+Note that configuring OpenSSL directly
+might result in unexpected behavior.
+
+
+
+
+
+
+
+
 =head2 ssl_crl
 
 
@@ -429,6 +655,71 @@ This directive appeared in version 0.7.2.
 
 
 Specifies a I<C<file>> with DH parameters for DHE ciphers.
+
+
+
+
+
+By default no parameters are set,
+and therefore DHE ciphers will not be used.
+
+B<NOTE>
+
+Prior to version 1.11.0, builtin parameters were used by default.
+
+
+
+
+
+
+
+
+=head2 ssl_early_data
+
+
+B<syntax:> ssl_early_data I<C<on> E<verbar> C<off>>
+
+
+B<default:> I<off>
+
+
+B<context:> I<http>
+
+
+B<context:> I<server>
+
+
+
+This directive appeared in version 1.15.3.
+
+
+
+
+
+Enables or disables TLS 1.3
+L<early data|https://datatracker.ietf.org/doc/html/rfc8446#section-2.3>.
+
+B<NOTE>
+
+Requests sent within early data are subject to
+L<replay attacks|https://datatracker.ietf.org/doc/html/rfc8470>.
+To protect against such attacks at the application layer,
+the $ssl_early_data variable
+should be used.
+
+
+
+    
+    proxy_set_header Early-Data $ssl_early_data;
+
+
+
+
+B<NOTE>
+
+The directive is supported when using OpenSSL 1.1.1 or higher (1.15.4) and
+L<BoringSSL|https://boringssl.googlesource.com/boringssl/>.
+
 
 
 
@@ -493,6 +784,209 @@ B<NOTE>
 
 Prior to version 1.11.0,
 the C<prime256v1> curve was used by default.
+
+
+
+
+
+
+
+B<NOTE>
+
+When using OpenSSL 1.0.2 or higher,
+this directive sets the list of curves supported by the server.
+Thus, in order for ECDSA certificates to work,
+it is important to include the curves used in the certificates.
+
+
+
+
+
+
+
+
+=head2 ssl_key_log
+
+
+B<syntax:> ssl_key_log I<path>
+
+
+
+B<context:> I<http>
+
+
+B<context:> I<server>
+
+
+
+This directive appeared in version 1.27.2.
+
+
+
+
+
+Enables logging of client connection SSL keys
+and specifies the path to the key log file.
+Keys are logged in the
+L<SSLKEYLOGFILE|https://datatracker.ietf.org/doc/html/draft-ietf-tls-keylogfile>
+format compatible with Wireshark.
+
+
+
+
+
+
+B<NOTE>
+
+This directive is available as part of our
+commercial subscription.
+
+
+
+
+
+
+
+
+=head2 ssl_ocsp
+
+
+B<syntax:> ssl_ocsp I<C<on> E<verbar>
+        C<off> E<verbar>
+        C<leaf>>
+
+
+B<default:> I<off>
+
+
+B<context:> I<http>
+
+
+B<context:> I<server>
+
+
+
+This directive appeared in version 1.19.0.
+
+
+
+
+
+Enables OCSP validation of the client certificate chain.
+The C<leaf> parameter
+enables validation of the client certificate only.
+
+
+
+
+
+For the OCSP validation to work,
+the L</ssl_verify_client> directive should be set to
+C<on> or C<optional>.
+
+
+
+
+
+To resolve the OCSP responder hostname,
+the L<ngx_http_core_module> directive
+should also be specified.
+
+
+
+
+
+Example:
+
+    
+    ssl_verify_client on;
+    ssl_ocsp          on;
+    resolver          192.0.2.1;
+
+
+
+
+
+
+
+
+
+=head2 ssl_ocsp_cache
+
+
+B<syntax:> ssl_ocsp_cache I<
+    C<off> E<verbar>
+    [C<shared>:I<C<name>>:I<C<size>>]>
+
+
+B<default:> I<off>
+
+
+B<context:> I<http>
+
+
+B<context:> I<server>
+
+
+
+This directive appeared in version 1.19.0.
+
+
+
+
+
+Sets C<name> and C<size> of the cache
+that stores client certificates status for OCSP validation.
+The cache is shared between all worker processes.
+A cache with the same name can be used in several
+virtual servers.
+
+
+
+
+
+The C<off> parameter prohibits the use of the cache.
+
+
+
+
+
+
+
+=head2 ssl_ocsp_responder
+
+
+B<syntax:> ssl_ocsp_responder I<I<C<url>>>
+
+
+
+B<context:> I<http>
+
+
+B<context:> I<server>
+
+
+
+This directive appeared in version 1.19.0.
+
+
+
+
+
+Overrides the URL of the OCSP responder specified in the
+“L<Authority
+Information Access|https://datatracker.ietf.org/doc/html/rfc5280#section-4.2.2.1>” certificate extension
+for validation of client certificates.
+
+
+
+
+
+Only “C<http:E<sol>E<sol>>” OCSP responders are supported:
+
+    
+    ssl_ocsp_responder http://ocsp.example.com/;
+
 
 
 
@@ -577,8 +1071,8 @@ B<context:> I<server>
 
 
 
-Specifies that server ciphers should be preferred over client
-ciphers when using the SSLv3 and TLS protocols.
+Specifies that server ciphers should be preferred over client ciphers
+when the SSLv3 and TLS protocols are used.
 
 
 
@@ -598,7 +1092,7 @@ B<syntax:> ssl_protocols I<
     [C<TLSv1.3>]>
 
 
-B<default:> I<TLSv1 TLSv1.1 TLSv1.2>
+B<default:> I<TLSv1.2 TLSv1.3>
 
 
 B<context:> I<http>
@@ -612,6 +1106,22 @@ B<context:> I<server>
 
 Enables the specified protocols.
 
+
+
+
+
+If the directive is specified
+on the L<ngx_http_core_module> level,
+the value from the default server can be used.
+Details are provided in the
+“L<Virtual
+server selection|server_names>” section.
+
+
+
+
+
+
 B<NOTE>
 
 The C<TLSv1.1> and C<TLSv1.2> parameters
@@ -621,7 +1131,66 @@ The C<TLSv1.1> and C<TLSv1.2> parameters
 B<NOTE>
 
 The C<TLSv1.3> parameter (1.13.0) works only when
-OpenSSL 1.1.1 built with TLSv1.3 support is used.
+OpenSSL 1.1.1 or higher is used.
+
+
+B<NOTE>
+
+The C<TLSv1.3> parameter is used by default
+since 1.23.4.
+
+
+
+
+
+
+
+
+=head2 ssl_reject_handshake
+
+
+B<syntax:> ssl_reject_handshake I<C<on> E<verbar> C<off>>
+
+
+B<default:> I<off>
+
+
+B<context:> I<http>
+
+
+B<context:> I<server>
+
+
+
+This directive appeared in version 1.19.4.
+
+
+
+
+
+If enabled, SSL handshakes in
+the L<ngx_http_core_module> block will be rejected.
+
+
+
+
+
+For example, in the following configuration, SSL handshakes with
+server names other than C<example.com> are rejected:
+
+    
+    server {
+        listen               443 ssl default_server;
+        ssl_reject_handshake on;
+    }
+    
+    server {
+        listen              443 ssl;
+        server_name         example.com;
+        ssl_certificate     example.com.crt;
+        ssl_certificate_key example.com.key;
+    }
+
 
 
 
@@ -701,7 +1270,12 @@ a cache shared between all worker processes.
 The cache size is specified in bytes; one megabyte can store
 about 4000 sessions.
 Each shared cache should have an arbitrary name.
-A cache with the same name can be used in several virtual servers.
+A cache with the same name can be used in several
+virtual servers.
+It is also used to automatically generate, store, and
+periodically rotate TLS session ticket keys (1.23.2)
+unless configured explicitly
+using the L</ssl_session_ticket_key> directive.
 
 
 
@@ -812,7 +1386,7 @@ This directive appeared in version 1.5.9.
 
 
 Enables or disables session resumption through
-L<TLS session tickets|https://tools.ietf.org/html/rfc5077>.
+L<TLS session tickets|https://datatracker.ietf.org/doc/html/rfc5077>.
 
 
 
@@ -871,7 +1445,7 @@ This directive appeared in version 1.3.7.
 
 Enables or disables
 L<stapling
-of OCSP responses|https://tools.ietf.org/html/rfc4366#section-3.6> by the server.
+of OCSP responses|https://datatracker.ietf.org/doc/html/rfc6066#section-8> by the server.
 Example:
 
     
@@ -965,7 +1539,7 @@ This directive appeared in version 1.3.7.
 
 Overrides the URL of the OCSP responder specified in the
 “L<Authority
-Information Access|https://tools.ietf.org/html/rfc5280#section-4.2.2.1>” certificate extension.
+Information Access|https://datatracker.ietf.org/doc/html/rfc5280#section-4.2.2.1>” certificate extension.
 
 
 
@@ -1183,9 +1757,19 @@ C<$uri>, C<$args> and others, are available.
 
 
 The C<ngx_http_ssl_module> module supports
-several embedded variables:
+embedded variables:
 
 =over
+
+
+
+=item C<$ssl_alpn_protocol>
+
+
+
+
+returns the protocol selected by ALPN during the SSL handshake,
+or an empty string otherwise (1.21.4);
 
 
 
@@ -1194,7 +1778,7 @@ several embedded variables:
 
 
 
-returns the string of ciphers used
+returns the name of the cipher used
 for an established SSL connection;
 
 
@@ -1268,7 +1852,7 @@ for an established SSL connection (1.7.1);
 
 returns the “issuer DN” string of the client certificate
 for an established SSL connection according to
-L<RFC 2253|https://tools.ietf.org/html/rfc2253> (1.11.6);
+L<RFC 2253|https://datatracker.ietf.org/doc/html/rfc2253> (1.11.6);
 
 
 
@@ -1305,7 +1889,7 @@ for an established SSL connection;
 
 returns the “subject DN” string of the client certificate
 for an established SSL connection according to
-L<RFC 2253|https://tools.ietf.org/html/rfc2253> (1.11.6);
+L<RFC 2253|https://datatracker.ietf.org/doc/html/rfc2253> (1.11.6);
 
 
 
@@ -1379,6 +1963,29 @@ did not contain the I<C<reason>> string.
 
 
 
+=item C<$ssl_curve>
+
+
+
+
+returns the negotiated curve used for
+SSL handshake key exchange process (1.21.5).
+Known curves are listed by names, unknown are shown in hexadecimal,
+for example:
+
+    
+    prime256v1
+
+
+
+B<NOTE>
+
+The variable is supported only when using OpenSSL version 3.0 or higher.
+With older versions, the variable value will be an empty string.
+
+
+
+
 =item C<$ssl_curves>
 
 
@@ -1403,6 +2010,17 @@ B<NOTE>
 
 The variable is available only for new sessions.
 
+
+
+
+=item C<$ssl_early_data>
+
+
+
+
+returns “C<1>” if
+TLS 1.3 early data is used
+and the handshake is not complete, otherwise “” (1.15.3).
 
 
 

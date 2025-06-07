@@ -50,7 +50,7 @@ external to nginx.
 
 B<syntax:> memcached_bind I<
     I<C<address>>
-    [ C<transparent >] E<verbar>
+    [C<transparent >] E<verbar>
     C<off>>
 
 
@@ -93,9 +93,12 @@ for example, from a real IP address of a client:
 
 
 In order for this parameter to work,
-it is necessary to run nginx worker processes with the
-L<superuser|ngx_core_module> privileges
-and configure kernel routing table
+it is usually necessary to run nginx worker processes with the
+L<superuser|ngx_core_module> privileges.
+On Linux it is not required (1.13.8) as if
+the C<transparent> parameter is specified, worker processes
+inherit the C<CAP_NET_RAW> capability from the master process.
+It is also necessary to configure kernel routing table
 to intercept network traffic from the memcached server.
 
 
@@ -158,41 +161,6 @@ B<context:> I<location>
 
 Defines a timeout for establishing a connection with a memcached server.
 It should be noted that this timeout cannot usually exceed 75 seconds.
-
-
-
-
-
-
-
-=head2 memcached_force_ranges
-
-
-B<syntax:> memcached_force_ranges I<C<on> E<verbar> C<off>>
-
-
-B<default:> I<off>
-
-
-B<context:> I<http>
-
-
-B<context:> I<server>
-
-
-B<context:> I<location>
-
-
-
-This directive appeared in version 1.7.7.
-
-
-
-
-
-Enables byte-range support
-for both cached and uncached responses from the memcached server
-regardless of the C<Accept-Ranges> field in these responses.
 
 
 
@@ -522,6 +490,43 @@ The timeout is set only between two successive write operations,
 not for the transmission of the whole request.
 If the memcached server does not receive anything within this time,
 the connection is closed.
+
+
+
+
+
+
+
+=head2 memcached_socket_keepalive
+
+
+B<syntax:> memcached_socket_keepalive I<C<on> E<verbar> C<off>>
+
+
+B<default:> I<off>
+
+
+B<context:> I<http>
+
+
+B<context:> I<server>
+
+
+B<context:> I<location>
+
+
+
+This directive appeared in version 1.15.6.
+
+
+
+
+
+Configures the “TCP keepalive” behavior
+for outgoing connections to a memcached server.
+By default, the operating system’s settings are in effect for the socket.
+If the directive is set to the value “C<on>”, the
+C<SO_KEEPALIVE> socket option is turned on for the socket.
 
 
 

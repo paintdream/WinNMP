@@ -79,9 +79,12 @@ for example, from a real IP address of a client:
 
 
 In order for this parameter to work,
-it is necessary to run nginx worker processes with the
-L<superuser|ngx_core_module> privileges
-and configure kernel routing table
+it is usually necessary to run nginx worker processes with the
+L<superuser|ngx_core_module> privileges.
+On Linux it is not required (1.13.8) as if
+the C<transparent> parameter is specified, worker processes
+inherit the C<CAP_NET_RAW> capability from the master process.
+It is also necessary to configure kernel routing table
 to intercept network traffic from the uwsgi server.
 
 
@@ -621,6 +624,7 @@ B<syntax:> uwsgi_cache_path I<
     C<keys_zone>=I<C<name>>:I<C<size>>
     [C<inactive>=I<C<time>>]
     [C<max_size>=I<C<size>>]
+    [C<min_free>=I<C<size>>]
     [C<manager_files>=I<C<number>>]
     [C<manager_sleep>=I<C<time>>]
     [C<manager_threshold>=I<C<time>>]
@@ -715,8 +719,12 @@ By default, C<inactive> is set to 10 minutes.
 
 
 The special “cache manager” process monitors the maximum cache size set
-by the C<max_size> parameter.
-When this size is exceeded, it removes the least recently used data.
+by the C<max_size> parameter,
+and the minimum amount of free space set
+by the C<min_free> (1.19.1) parameter
+on the file system with cache.
+When the size is exceeded or there is not enough free space,
+it removes the least recently used data.
 The data is removed in iterations configured by
 C<manager_files>,
 C<manager_threshold>, and
@@ -1024,7 +1032,7 @@ This has lower priority than using the directive parameters.
 =item *
 
 The
-“L<stale-while-revalidate|https://tools.ietf.org/html/rfc5861#section-3>”
+“L<stale-while-revalidate|https://datatracker.ietf.org/doc/html/rfc5861#section-3>”
 extension of the C<Cache-Control> header field permits
 using a stale cached response if it is currently being updated.
 
@@ -1033,7 +1041,7 @@ using a stale cached response if it is currently being updated.
 =item *
 
 The
-“L<stale-if-error|https://tools.ietf.org/html/rfc5861#section-4>”
+“L<stale-if-error|https://datatracker.ietf.org/doc/html/rfc5861#section-4>”
 extension of the C<Cache-Control> header field permits
 using a stale cached response in case of an error.
 
@@ -1459,6 +1467,7 @@ the overall rate will be twice as much as the specified limit.
 The limitation works only if
 buffering of responses from the uwsgi
 server is enabled.
+Parameter value can contain variables (1.27.0).
 
 
 
@@ -1681,7 +1690,7 @@ a server returned a response with the code 429 (1.11.13);
 
 
 normally, requests with a
-L<non-idempotent|https://tools.ietf.org/html/rfc7231#section-4.2.2>
+L<non-idempotent|https://datatracker.ietf.org/doc/html/rfc7231#section-4.2.2>
 method
 (C<POST>, C<LOCK>, C<PATCH>)
 are not passed to the next server
@@ -1870,10 +1879,9 @@ B<context:> I<location>
 
 Sets a I<C<parameter>> that should be passed to the uwsgi server.
 The I<C<value>> can contain text, variables, and their combination.
-These directives are inherited from the previous level if and
-only if there are no
-C<uwsgi_param>
-directives defined on the current level.
+These directives are inherited from the previous configuration level
+if and only if there are no C<uwsgi_param> directives
+defined on the current level.
 
 
 
@@ -1881,7 +1889,7 @@ directives defined on the current level.
 
 Standard
 L<CGI
-environment variables|https://tools.ietf.org/html/rfc3875#section-4.1>
+environment variables|https://datatracker.ietf.org/doc/html/rfc3875#section-4.1>
 should be provided as uwsgi headers, see the F<uwsgi_params> file
 provided in the distribution:
 
@@ -1898,7 +1906,7 @@ provided in the distribution:
 
 
 If the directive is specified with C<if_not_empty> (1.1.11) then
-such a parameter will not be passed to the server until its value is not empty:
+such a parameter will be passed to the server only if its value is not empty:
 
     
     uwsgi_param HTTPS $https if_not_empty;
@@ -2198,6 +2206,43 @@ the connection is closed.
 
 
 
+=head2 uwsgi_socket_keepalive
+
+
+B<syntax:> uwsgi_socket_keepalive I<C<on> E<verbar> C<off>>
+
+
+B<default:> I<off>
+
+
+B<context:> I<http>
+
+
+B<context:> I<server>
+
+
+B<context:> I<location>
+
+
+
+This directive appeared in version 1.15.6.
+
+
+
+
+
+Configures the “TCP keepalive” behavior
+for outgoing connections to a uwsgi server.
+By default, the operating system’s settings are in effect for the socket.
+If the directive is set to the value “C<on>”, the
+C<SO_KEEPALIVE> socket option is turned on for the socket.
+
+
+
+
+
+
+
 =head2 uwsgi_ssl_certificate
 
 
@@ -2223,6 +2268,133 @@ This directive appeared in version 1.7.8.
 
 Specifies a I<C<file>> with the certificate in the PEM format
 used for authentication to a secured uwsgi server.
+
+
+
+
+
+Since version 1.21.0, variables can be used in the I<C<file>> name.
+
+
+
+
+
+
+
+=head2 uwsgi_ssl_certificate_cache
+
+
+B<syntax:> uwsgi_ssl_certificate_cache I<C<off>>
+
+
+B<syntax:> uwsgi_ssl_certificate_cache I<
+    C<max>=I<C<N>>
+    [C<inactive>=I<C<time>>]
+    [C<valid>=I<C<time>>]>
+
+
+B<default:> I<off>
+
+
+B<context:> I<http>
+
+
+B<context:> I<server>
+
+
+B<context:> I<location>
+
+
+
+This directive appeared in version 1.27.4.
+
+
+
+
+
+Defines a cache that stores
+SSL certificates and
+secret keys
+specified with variables.
+
+
+
+
+
+The directive has the following parameters:
+
+=over
+
+
+
+=item 
+C<max>
+
+
+
+
+
+sets the maximum number of elements in the cache;
+on cache overflow the least recently used (LRU) elements are removed;
+
+
+
+=item 
+C<inactive>
+
+
+
+
+
+defines a time after which an element is removed from the cache
+if it has not been accessed during this time;
+by default, it is 10 seconds;
+
+
+
+=item 
+C<valid>
+
+
+
+
+
+defines a time during which
+an element in the cache is considered valid
+and can be reused;
+by default, it is 60 seconds.
+Certificates that exceed this time will be reloaded or revalidated;
+
+
+
+=item 
+C<off>
+
+
+
+
+
+disables the cache.
+
+
+
+
+=back
+
+
+
+
+
+
+
+Example:
+
+    
+    uwsgi_ssl_certificate       $uwsgi_ssl_server_name.crt;
+    uwsgi_ssl_certificate_key   $uwsgi_ssl_server_name.key;
+    uwsgi_ssl_certificate_cache max=1000 inactive=20s valid=1m;
+
+
 
 
 
@@ -2265,6 +2437,12 @@ C<engine>:I<C<name>>:I<C<id>>
 can be specified instead of the I<C<file>> (1.7.9),
 which loads a secret key with a specified I<C<id>>
 from the OpenSSL engine I<C<name>>.
+
+
+
+
+
+Since version 1.21.0, variables can be used in the I<C<file>> name.
 
 
 
@@ -2313,6 +2491,66 @@ The full list can be viewed using the
 
 
 
+=head2 uwsgi_ssl_conf_command
+
+
+B<syntax:> uwsgi_ssl_conf_command I<I<C<name>> I<C<value>>>
+
+
+
+B<context:> I<http>
+
+
+B<context:> I<server>
+
+
+B<context:> I<location>
+
+
+
+This directive appeared in version 1.19.4.
+
+
+
+
+
+Sets arbitrary OpenSSL configuration
+L<commands|https://www.openssl.org/docs/man1.1.1/man3/SSL_CONF_cmd.html>
+when establishing a connection with the secured uwsgi server.
+
+B<NOTE>
+
+The directive is supported when using OpenSSL 1.0.2 or higher.
+
+
+
+
+
+
+Several C<uwsgi_ssl_conf_command> directives
+can be specified on the same level.
+These directives are inherited from the previous configuration level
+if and only if there are
+no C<uwsgi_ssl_conf_command> directives
+defined on the current level.
+
+
+
+
+
+
+B<NOTE>
+
+Note that configuring OpenSSL directly
+might result in unexpected behavior.
+
+
+
+
+
+
+
+
 =head2 uwsgi_ssl_crl
 
 
@@ -2339,6 +2577,52 @@ This directive appeared in version 1.7.0.
 Specifies a I<C<file>> with revoked certificates (CRL)
 in the PEM format used to verify
 the certificate of the secured uwsgi server.
+
+
+
+
+
+
+
+=head2 uwsgi_ssl_key_log
+
+
+B<syntax:> uwsgi_ssl_key_log I<path>
+
+
+
+B<context:> I<http>
+
+
+B<context:> I<server>
+
+
+B<context:> I<location>
+
+
+
+This directive appeared in version 1.27.2.
+
+
+
+
+
+Enables logging of secured uwsgi server connection SSL keys
+and specifies the path to the key log file.
+Keys are logged in the
+L<SSLKEYLOGFILE|https://datatracker.ietf.org/doc/html/draft-ietf-tls-keylogfile>
+format compatible with Wireshark.
+
+
+
+
+
+
+B<NOTE>
+
+This directive is available as part of our
+commercial subscription.
+
 
 
 
@@ -2435,7 +2719,7 @@ B<syntax:> uwsgi_ssl_protocols I<
     [C<TLSv1.3>]>
 
 
-B<default:> I<TLSv1 TLSv1.1 TLSv1.2>
+B<default:> I<TLSv1.2 TLSv1.3>
 
 
 B<context:> I<http>
@@ -2455,6 +2739,17 @@ This directive appeared in version 1.5.8.
 
 
 Enables the specified protocols for requests to a secured uwsgi server.
+
+
+
+
+
+
+B<NOTE>
+
+The C<TLSv1.3> parameter is used by default
+since 1.23.4.
+
 
 
 
@@ -2526,7 +2821,7 @@ This directive appeared in version 1.5.8.
 Determines whether SSL sessions can be reused when working with
 a secured uwsgi server.
 If the errors
-“C<SSL3_GET_FINISHED:digest check failed>”
+“C<digest check failed>”
 appear in the logs, try disabling session reuse.
 
 

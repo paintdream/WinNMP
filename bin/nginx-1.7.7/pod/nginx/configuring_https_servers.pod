@@ -28,7 +28,7 @@ files should be specified:
         server_name         www.example.com;
         ssl_certificate     <b>www.example.com.crt</b>;
         ssl_certificate_key <b>www.example.com.key</b>;
-        ssl_protocols       TLSv1 TLSv1.1 TLSv1.2;
+        ssl_protocols       TLSv1.2 TLSv1.3;
         ssl_ciphers         HIGH:!aNULL:!MD5;
         ...
     }
@@ -61,7 +61,7 @@ L<ngx_http_ssl_module>
 can be used to limit connections
 to include only the strong versions and ciphers of SSLE<sol>TLS.
 By default nginx uses
-“C<ssl_protocols TLSv1 TLSv1.1 TLSv1.2>”
+“C<ssl_protocols TLSv1.2 TLSv1.3>”
 and “C<ssl_ciphers HIGH:!aNULL:!MD5>”,
 so configuring them explicitly is generally not needed.
 Note that default values of these directives were
@@ -113,7 +113,7 @@ with 10 megabyte shared session cache:
     
             ssl_certificate     www.example.com.crt;
             ssl_certificate_key www.example.com.key;
-            ssl_protocols       TLSv1 TLSv1.1 TLSv1.2;
+            ssl_protocols       TLSv1.2 TLSv1.3;
             ssl_ciphers         HIGH:!aNULL:!MD5;
             ...
 
@@ -165,8 +165,7 @@ order, nginx will fail to start and will display the error message:
 
     
     SSL_CTX_use_PrivateKey_file(" ... /www.example.com.key") failed
-       (SSL: error:0B080074:x509 certificate routines:
-        X509_check_private_key:key values mismatch)
+       (SSL: error:05800074:x509 certificate routines::key values mismatch)
 
 
 
@@ -210,14 +209,6 @@ the C<openssl> command-line utility may be used, for example:
          /CN=http://www.valicert.com//emailAddress=info@valicert.com
     ...
 
-
-
-
-B<NOTE>
-
-When testing configurations with SNI,
-it is important to specify the C<-servername> option
-as C<openssl> does not use SNI by default.
 
 
 In this example the subject (“I<s>”) of the
@@ -271,7 +262,8 @@ L<ngx_http_core_module> directive
 was added to solve this issue.
 The use of the
 L<ngx_http_ssl_module> directive
-in modern versions is thus discouraged.
+in modern versions is thus discouraged;
+it was removed in 1.25.1.
 
 
 
@@ -408,7 +400,9 @@ and, therefore, the server will know which certificate it should use
 for the connection.
 SNI is currently
 L<supported|http://en.wikipedia.org/wiki/Server_Name_Indication#Support>
-by most modern browsers, though may not be used by some old or special clients.
+by most modern browsers
+and is a mandatory-to-implement extension in TLSv1.3,
+though may not be used by some old or special clients.
 
 B<NOTE>
 
@@ -504,6 +498,22 @@ The shared SSL session cache has been supported since 0.5.6.
 
 =over
 
+
+
+
+=item *
+
+Version 1.27.3 and later: the default SSL protocols are
+TLSv1.2 and TLSv1.3 (if supported by the OpenSSL library).
+Otherwise, when OpenSSL 1.0.0 or older is used,
+the default SSL protocols are TLSv1 and TLSv1.1.
+
+
+
+=item *
+
+Version 1.23.4 and later: the default SSL protocols are TLSv1,
+TLSv1.1, TLSv1.2, and TLSv1.3 (if supported by the OpenSSL library).
 
 
 

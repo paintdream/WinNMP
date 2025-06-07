@@ -96,7 +96,7 @@ If the link has a limited lifetime and the time has expired,
 the C<$secure_link> variable is set to “C<0>”.
 Otherwise, it is set to “C<1>”.
 The MD5 hash value passed in a request is encoded in
-L<base64url|https://tools.ietf.org/html/rfc4648#section-5>.
+L<base64url|https://datatracker.ietf.org/doc/html/rfc4648#section-5>.
 
 
 

@@ -7,6 +7,7 @@ local wbproto = require "resty.websocket.protocol"
 local new_tab = wbproto.new_tab
 local _recv_frame = wbproto.recv_frame
 local _send_frame = wbproto.send_frame
+local ngx = ngx
 local http_ver = ngx.req.http_version
 local req_sock = ngx.req.socket
 local ngx_header = ngx.header
@@ -16,8 +17,9 @@ local char = string.char
 local str_find = string.find
 local sha1_bin = ngx.sha1_bin
 local base64 = ngx.encode_base64
-local ngx = ngx
 local read_body = ngx.req.read_body
+local ngx_send_headers = ngx.send_headers
+local ngx_flush = ngx.flush
 local band = bit.band
 local rshift = bit.rshift
 local type = type
@@ -27,7 +29,7 @@ local tostring = tostring
 
 
 local _M = new_tab(0, 10)
-_M._VERSION = '0.07'
+_M._VERSION = '0.12'
 
 local mt = { __index = _M }
 
@@ -93,11 +95,11 @@ function _M.new(self, opts)
     ngx_header["Content-Type"] = nil
 
     ngx.status = 101
-    local ok, err = ngx.send_headers()
+    local ok, err = ngx_send_headers()
     if not ok then
-        return nil, "failed to send response header: " .. (err or "unknonw")
+        return nil, "failed to send response header: " .. (err or "unknown")
     end
-    ok, err = ngx.flush(true)
+    ok, err = ngx_flush(true)
     if not ok then
         return nil, "failed to flush response header: " .. (err or "unknown")
     end
@@ -109,8 +111,12 @@ function _M.new(self, opts)
     end
 
     local max_payload_len, send_masked, timeout
+    local max_recv_len, max_send_len
     if opts then
         max_payload_len = opts.max_payload_len
+        max_recv_len = opts.max_recv_len
+        max_send_len = opts.max_send_len
+
         send_masked = opts.send_masked
         timeout = opts.timeout
 
@@ -119,9 +125,14 @@ function _M.new(self, opts)
         end
     end
 
+    max_payload_len = max_payload_len or 65535
+    max_recv_len = max_recv_len or max_payload_len
+    max_send_len = max_send_len or max_payload_len
+
     return setmetatable({
         sock = sock,
-        max_payload_len = max_payload_len or 65535,
+        max_recv_len = max_recv_len,
+        max_send_len = max_send_len,
         send_masked = send_masked,
     }, mt)
 end
@@ -147,7 +158,7 @@ function _M.recv_frame(self)
         return nil, nil, "not initialized yet"
     end
 
-    local data, typ, err =  _recv_frame(sock, self.max_payload_len, true)
+    local data, typ, err =  _recv_frame(sock, self.max_recv_len, true)
     if not data and not str_find(err, ": timeout", 1, true) then
         self.fatal = true
     end
@@ -166,13 +177,18 @@ local function send_frame(self, fin, opcode, payload)
     end
 
     local bytes, err = _send_frame(sock, fin, opcode, payload,
-                                   self.max_payload_len, self.send_masked)
+                                   self.max_send_len, self.send_masked)
     if not bytes then
         self.fatal = true
     end
     return bytes, err
 end
 _M.send_frame = send_frame
+
+
+function _M.send_continue(self, data)
+    return send_frame(self, true, 0x0, data)
+end
 
 
 function _M.send_text(self, data)
@@ -189,6 +205,7 @@ function _M.send_close(self, code, msg)
     local payload
     if code then
         if type(code) ~= "number" or code > 0x7fff then
+            return nil, "bad status code"
         end
         payload = char(band(rshift(code, 8), 0xff), band(code, 0xff))
                         .. (msg or "")

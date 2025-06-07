@@ -53,6 +53,38 @@ request header field:
 
 =head1 Directives
 
+=head2 session_log
+
+
+B<syntax:> session_log I<I<C<name>> E<verbar> C<off>>
+
+
+B<default:> I<off>
+
+
+B<context:> I<http>
+
+
+B<context:> I<server>
+
+
+B<context:> I<location>
+
+
+
+
+
+Enables the use of the specified session log.
+The special value C<off> cancels the effect
+of the C<session_log> directives
+inherited from the previous configuration level.
+
+
+
+
+
+
+
 =head2 session_log_format
 
 
@@ -136,38 +168,6 @@ The C<format> parameter sets the custom session log
 format configured by the L</session_log_format> directive.
 If C<format> is not specified, the predefined
 “C<combined>” format is used.
-
-
-
-
-
-
-
-=head2 session_log
-
-
-B<syntax:> session_log I<I<C<name>> E<verbar> C<off>>
-
-
-B<default:> I<off>
-
-
-B<context:> I<http>
-
-
-B<context:> I<server>
-
-
-B<context:> I<location>
-
-
-
-
-
-Enables the use of the specified session log.
-The special value C<off> cancels all
-C<session_log> directives inherited from the previous
-configuration level.
 
 
 

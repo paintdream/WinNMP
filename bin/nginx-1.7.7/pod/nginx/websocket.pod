@@ -13,14 +13,14 @@ websocket - WebSocket proxying
 
 To turn a connection between a client and server from HTTPE<sol>1.1 into WebSocket,
 the L<protocol
-switch|https://tools.ietf.org/html/rfc2616#section-14.42> mechanism available in HTTPE<sol>1.1 is used.
+switch|https://datatracker.ietf.org/doc/html/rfc2616#section-14.42> mechanism available in HTTPE<sol>1.1 is used.
 
 
 
 
 
 There is one subtlety however: since the C<Upgrade> is a
-L<hop-by-hop|https://tools.ietf.org/html/rfc2616#section-13.5.1>
+L<hop-by-hop|https://datatracker.ietf.org/doc/html/rfc2616#section-13.5.1>
 header, it is not passed from a client to proxied server.
 With forward proxying, clients may use the C<CONNECT>
 method to circumvent this issue.

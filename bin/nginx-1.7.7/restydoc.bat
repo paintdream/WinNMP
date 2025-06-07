@@ -16,7 +16,7 @@ goto endofperl
 use strict;
 use warnings;
 
-our $VERSION = '0.20';
+our $VERSION = '0.27';
 
 use Getopt::Std qw( getopts );
 use File::Spec ();

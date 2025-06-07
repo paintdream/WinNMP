@@ -263,6 +263,12 @@ marks the server as a backup server.
 Connections to the backup server will be passed
 when the primary servers are unavailable.
 
+B<NOTE>
+
+The parameter cannot be used along with the
+L</hash> and L</random> load balancing methods.
+
+
 
 
 =item 
@@ -273,23 +279,6 @@ C<down>
 
 
 marks the server as permanently unavailable.
-
-
-
-
-=back
-
-
-
-
-
-
-
-Additionally,
-the following parameters are available as part of our
-commercial subscription:
-
-=over
 
 
 
@@ -308,22 +297,20 @@ The server group must reside in the shared memory.
 
 
 In order for this parameter to work,
-the L<ngx_stream_core_module> directive
+the C<resolver> directive
 must be specified in the
-L<ngx_stream_core_module> block.
-Example:
+L<stream|ngx_stream_core_module> block
+or in the corresponding upstream block.
 
-    
-    stream {
-        resolver 10.0.0.1;
-    
-        upstream u {
-            zone ...;
-            ...
-            server example.com:12345 resolve;
-        }
-    }
 
+
+
+
+
+B<NOTE>
+
+Prior to version 1.27.3, this parameter was available only as part of our
+commercial subscription.
 
 
 
@@ -338,7 +325,7 @@ C<service>=I<C<name>>
 
 
 enables resolving of DNS
-L<SRV|https://tools.ietf.org/html/rfc2782>
+L<SRV|https://datatracker.ietf.org/doc/html/rfc2782>
 records and sets the service I<C<name>> (1.9.13).
 In order for this parameter to work, it is necessary to specify
 the L</resolve> parameter for the server
@@ -346,7 +333,7 @@ and specify a hostname without a port number.
 
 
 If the service name does not contain a dot (“C<.>”), then
-the L<RFC|https://tools.ietf.org/html/rfc2782>-compliant name
+the L<RFC|https://datatracker.ietf.org/doc/html/rfc2782>-compliant name
 is constructed
 and the TCP protocol is added to the service prefix.
 For example, to look up the
@@ -385,6 +372,34 @@ the rest of SRV records are ignored.
 
 
 
+
+B<NOTE>
+
+Prior to version 1.27.3, this parameter was available only as part of our
+commercial subscription.
+
+
+
+
+
+
+
+=back
+
+
+
+
+
+
+
+Additionally,
+the following parameters are available as part of our
+commercial subscription:
+
+=over
+
+
+
 =item 
 C<slow_start>=I<C<time>>
 
@@ -402,7 +417,7 @@ Default value is zero, i.e. slow start is disabled.
 B<NOTE>
 
 The parameter cannot be used along with the
-L</hash> load balancing method.
+L</hash> and L</random> load balancing methods.
 
 
 
@@ -447,7 +462,7 @@ Defines the I<C<name>> and I<C<size>> of the shared
 memory zone that keeps the group’s configuration and run-time state that are
 shared between worker processes.
 Several groups may share the same zone.
-In this case, it is enough to specify the zone size only once.
+In this case, it is enough to specify the I<C<size>> only once.
 
 
 
@@ -458,9 +473,16 @@ as part of our commercial subscription,
 such groups allow changing the group membership
 or modifying the settings of a particular server
 without the need of restarting nginx.
-The configuration is accessible via a special location
+The configuration is accessible via the
+L<API|ngx_http_api_module> module (1.13.3).
+
+B<NOTE>
+
+Prior to version 1.13.3,
+the configuration was accessible only via a special location
 handled by
 L<ngx_http_upstream_conf_module>.
+
 
 
 
@@ -507,7 +529,7 @@ Examples:
 The state is currently limited to the list of servers with their parameters.
 The file is read when parsing the configuration and is updated each time
 the upstream configuration is
-L<changed|ngx_http_upstream_conf_module>.
+L<changed|ngx_http_api_module>.
 Changing the file content directly should be avoided.
 The directive cannot be used
 along with the L</server> directive.
@@ -556,7 +578,7 @@ B<context:> I<upstream>
 
 
 Specifies a load balancing method for a server group
-where client-server mapping is based on the hashed I<C<key>> value.
+where the client-server mapping is based on the hashed I<C<key>> value.
 The I<C<key>> can contain text, variables,
 and their combinations (1.11.2).
 Usage example:
@@ -568,7 +590,7 @@ Usage example:
 Note that adding or removing a server from the group
 may result in remapping most of the keys to different servers.
 The method is compatible with the
-L<Cache::Memcached|http://search.cpan.org/perldoc?Cache%3A%3AMemcached>
+L<Cache::Memcached|https://metacpan.org/pod/Cache::Memcached>
 Perl library.
 
 
@@ -576,14 +598,14 @@ Perl library.
 
 
 If the C<consistent> parameter is specified,
-the L<ketama|http://www.last.fm/user/RJ/journal/2007/04/10/392555/>
+the L<ketama|https://www.metabrew.com/article/libketama-consistent-hashing-algo-memcached-clients>
 consistent hashing method will be used instead.
 The method ensures that only a few keys
 will be remapped to different servers
 when a server is added to or removed from the group.
 This helps to achieve a higher cache hit ratio for caching servers.
 The method is compatible with the
-L<Cache::Memcached::Fast|http://search.cpan.org/perldoc?Cache%3A%3AMemcached%3A%3AFast>
+L<Cache::Memcached::Fast|https://metacpan.org/pod/Cache::Memcached::Fast>
 Perl library with the I<C<ketama_points>> parameter set to 160.
 
 
@@ -603,8 +625,7 @@ B<context:> I<upstream>
 
 
 
-Specifies that a server group should use a load balancing method
-where a connection
+Specifies that a group should use a load balancing method where a connection
 is passed to the server with the least number of active connections,
 taking into account weights of servers.
 If there are several such servers, they are tried in turn using a
@@ -644,11 +665,15 @@ weighted round-robin balancing method.
 
 
 If the C<connect> parameter is specified,
-time to connect to the upstream server is used.
+time to
+connect
+to the upstream server is used.
 If the C<first_byte> parameter is specified,
-time to receive the first byte of data is used.
+time to receive the
+first byte of data is used.
 If the C<last_byte> is specified,
-time to receive the last byte of data is used.
+time to receive the
+last byte of data is used.
 If the C<inflight> parameter is specified (1.11.6),
 incomplete connections are also taken into account.
 
@@ -666,6 +691,204 @@ incomplete connections were taken into account by default.
 B<NOTE>
 
 This directive is available as part of our
+commercial subscription.
+
+
+
+
+
+
+
+
+=head2 random
+
+
+B<syntax:> random I<[C<two> [I<C<method>>]]>
+
+
+
+B<context:> I<upstream>
+
+
+
+This directive appeared in version 1.15.1.
+
+
+
+
+
+Specifies that a group should use a load balancing method where a connection
+is passed to a randomly selected server, taking into account weights
+of servers.
+
+
+
+
+
+The optional C<two> parameter
+instructs nginx to randomly select
+L<two|https://homes.cs.washington.edu/~karlin/papers/balls.pdf>
+servers and then choose a server
+using the specified C<method>.
+The default method is C<least_conn>
+which passes a connection to a server
+with the least number of active connections.
+
+
+
+
+
+The C<least_time> method passes a connection to a server
+with the least average time and least number of active connections.
+If C<least_time=connect> parameter is specified,
+time to
+connect
+to the upstream server is used.
+If C<least_time=first_byte> parameter is specified,
+time to receive the
+first byte of data is used.
+If C<least_time=last_byte> is specified,
+time to receive the
+last byte of data is used.
+
+B<NOTE>
+
+The C<least_time> method is available as a part of our
+commercial subscription.
+
+
+
+
+
+
+
+
+=head2 resolver
+
+
+B<syntax:> resolver I<
+    I<C<address>> ...
+    [C<valid>=I<C<time>>]
+    [C<ipv4>=C<on>E<verbar>C<off>]
+    [C<ipv6>=C<on>E<verbar>C<off>]
+    [C<status_zone>=I<C<zone>>]>
+
+
+
+B<context:> I<upstream>
+
+
+
+This directive appeared in version 1.27.3.
+
+
+
+
+
+Configures name servers used to resolve names of upstream servers
+into addresses, for example:
+
+    
+    resolver 127.0.0.1 [::1]:5353;
+
+
+The address can be specified as a domain name or IP address,
+with an optional port.
+If port is not specified, the port 53 is used.
+Name servers are queried in a round-robin fashion.
+
+
+
+
+
+By default, nginx will look up both IPv4 and IPv6 addresses while resolving.
+If looking up of IPv4 or IPv6 addresses is not desired,
+the C<ipv4=off> (1.23.1) or
+the C<ipv6=off> parameter can be specified.
+
+
+
+
+
+By default, nginx caches answers using the TTL value of a response.
+The optional C<valid> parameter allows overriding it:
+
+    
+    resolver 127.0.0.1 [::1]:5353 valid=30s;
+
+
+
+B<NOTE>
+
+To prevent DNS spoofing, it is recommended
+configuring DNS servers in a properly secured trusted local network.
+
+
+
+
+
+
+The optional C<status_zone> parameter (1.17.5)
+enables
+L<collection|ngx_http_api_module>
+of DNS server statistics of requests and responses
+in the specified I<C<zone>>.
+The parameter is available as part of our
+commercial subscription.
+
+
+
+
+
+
+B<NOTE>
+
+Since version 1.17.5 and prior to version 1.27.3,
+this directive was available only as part of our
+commercial subscription.
+
+
+
+
+
+
+
+
+=head2 resolver_timeout
+
+
+B<syntax:> resolver_timeout I<I<C<time>>>
+
+
+B<default:> I<30s>
+
+
+B<context:> I<upstream>
+
+
+
+This directive appeared in version 1.27.3.
+
+
+
+
+
+Sets a timeout for name resolution, for example:
+
+    
+    resolver_timeout 5s;
+
+
+
+
+
+
+
+
+B<NOTE>
+
+Since version 1.17.5 and prior to version 1.27.3,
+this directive was available only as part of our
 commercial subscription.
 
 
@@ -701,24 +924,24 @@ the variable keeps the name of the server group.
 
 
 
-=item C<$upstream_bytes_sent>
-
-
-
-
-number of bytes sent to an upstream server (1.11.4).
-Values from several connections
-are separated by commas like addresses in the
-$upstream_addr variable.
-
-
-
 =item C<$upstream_bytes_received>
 
 
 
 
 number of bytes received from an upstream server (1.11.4).
+Values from several connections
+are separated by commas like addresses in the
+$upstream_addr variable.
+
+
+
+=item C<$upstream_bytes_sent>
+
+
+
+
+number of bytes sent to an upstream server (1.11.4).
 Values from several connections
 are separated by commas like addresses in the
 $upstream_addr variable.

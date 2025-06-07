@@ -74,7 +74,7 @@ After all clients are serviced, old worker processes are shut down.
 
 
 Let’s illustrate this by example.
-Imagine that nginx is run on FreeBSD 4.x and the command
+Imagine that nginx is run on FreeBSD and the command
 
     
     ps axw -o pid,ppid,user,%cpu,vsz,wchan,command | egrep '(nginx|PID)'
@@ -264,8 +264,8 @@ the F<.oldbin> suffix from the file name with the process ID.
 
 
 
-If upgrade was successful, then the old master process should be sent
-the QUIT signal, and only new processes will stay:
+If upgrade was successful, then the QUIT signal should be sent to
+the old master process, and only new processes will stay:
 
     
       PID  PPID USER    %CPU   VSZ WCHAN  COMMAND

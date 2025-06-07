@@ -89,9 +89,12 @@ for example, from a real IP address of a client:
 
 
 In order for this parameter to work,
-it is necessary to run nginx worker processes with the
-L<superuser|ngx_core_module> privileges
-and configure kernel routing table
+it is usually necessary to run nginx worker processes with the
+L<superuser|ngx_core_module> privileges.
+On Linux it is not required (1.13.8) as if
+the C<transparent> parameter is specified, worker processes
+inherit the C<CAP_NET_RAW> capability from the master process.
+It is also necessary to configure kernel routing table
 to intercept network traffic from the FastCGI server.
 
 
@@ -639,6 +642,7 @@ B<syntax:> fastcgi_cache_path I<
     C<keys_zone>=I<C<name>>:I<C<size>>
     [C<inactive>=I<C<time>>]
     [C<max_size>=I<C<size>>]
+    [C<min_free>=I<C<size>>]
     [C<manager_files>=I<C<number>>]
     [C<manager_sleep>=I<C<time>>]
     [C<manager_threshold>=I<C<time>>]
@@ -733,8 +737,12 @@ By default, C<inactive> is set to 10 minutes.
 
 
 The special “cache manager” process monitors the maximum cache size set
-by the C<max_size> parameter.
-When this size is exceeded, it removes the least recently used data.
+by the C<max_size> parameter,
+and the minimum amount of free space set
+by the C<min_free> (1.19.1) parameter
+on the file system with cache.
+When the size is exceeded or there is not enough free space,
+it removes the least recently used data.
 The data is removed in iterations configured by
 C<manager_files>,
 C<manager_threshold>, and
@@ -1042,7 +1050,7 @@ This has lower priority than using the directive parameters.
 =item *
 
 The
-“L<stale-while-revalidate|https://tools.ietf.org/html/rfc5861#section-3>”
+“L<stale-while-revalidate|https://datatracker.ietf.org/doc/html/rfc5861#section-3>”
 extension of the C<Cache-Control> header field permits
 using a stale cached response if it is currently being updated.
 
@@ -1051,7 +1059,7 @@ using a stale cached response if it is currently being updated.
 =item *
 
 The
-“L<stale-if-error|https://tools.ietf.org/html/rfc5861#section-4>”
+“L<stale-if-error|https://datatracker.ietf.org/doc/html/rfc5861#section-4>”
 extension of the C<Cache-Control> header field permits
 using a stale cached response in case of an error.
 
@@ -1218,7 +1226,7 @@ server has returned an invalid response.
 This allows handling application errors in nginx, for example:
 
     
-    location /php {
+    location /php/ {
         fastcgi_pass backend:9000;
         ...
         fastcgi_catch_stderr "PHP Fatal error";
@@ -1597,6 +1605,7 @@ the overall rate will be twice as much as the specified limit.
 The limitation works only if
 buffering of responses from the FastCGI
 server is enabled.
+Parameter value can contain variables (1.27.0).
 
 
 
@@ -1758,7 +1767,7 @@ a server returned a response with the code 429 (1.11.13);
 
 
 normally, requests with a
-L<non-idempotent|https://tools.ietf.org/html/rfc7231#section-4.2.2>
+L<non-idempotent|https://datatracker.ietf.org/doc/html/rfc7231#section-4.2.2>
 method
 (C<POST>, C<LOCK>, C<PATCH>)
 are not passed to the next server
@@ -1947,10 +1956,9 @@ B<context:> I<location>
 
 Sets a I<C<parameter>> that should be passed to the FastCGI server.
 The I<C<value>> can contain text, variables, and their combination.
-These directives are inherited from the previous level if and
-only if there are no
-C<fastcgi_param>
-directives defined on the current level.
+These directives are inherited from the previous configuration level
+if and only if there are no C<fastcgi_param> directives
+defined on the current level.
 
 
 
@@ -2004,7 +2012,7 @@ should also be passed with the value “200”:
 
 
 If the directive is specified with C<if_not_empty> (1.1.11) then
-such a parameter will not be passed to the server until its value is not empty:
+such a parameter will be passed to the server only if its value is not empty:
 
     
     fastcgi_param HTTPS           $https if_not_empty;
@@ -2315,6 +2323,43 @@ The timeout is set only between two successive write operations,
 not for the transmission of the whole request.
 If the FastCGI server does not receive anything within this time,
 the connection is closed.
+
+
+
+
+
+
+
+=head2 fastcgi_socket_keepalive
+
+
+B<syntax:> fastcgi_socket_keepalive I<C<on> E<verbar> C<off>>
+
+
+B<default:> I<off>
+
+
+B<context:> I<http>
+
+
+B<context:> I<server>
+
+
+B<context:> I<location>
+
+
+
+This directive appeared in version 1.15.6.
+
+
+
+
+
+Configures the “TCP keepalive” behavior
+for outgoing connections to a FastCGI server.
+By default, the operating system’s settings are in effect for the socket.
+If the directive is set to the value “C<on>”, the
+C<SO_KEEPALIVE> socket option is turned on for the socket.
 
 
 

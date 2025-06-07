@@ -43,7 +43,7 @@ address is used.
 
 
 Sets facility of syslog messages, as defined in
-L<RFC 3164|https://tools.ietf.org/html/rfc3164#section-4.1.1>.
+L<RFC 3164|https://datatracker.ietf.org/doc/html/rfc3164#section-4.1.1>.
 Facility can be one of “C<kern>”, “C<user>”,
 “C<mail>”, “C<daemon>”,
 “C<auth>”, “C<intern>”,
@@ -64,7 +64,7 @@ Default is “C<local7>”.
 Sets severity of syslog messages for
 L<ngx_http_log_module>,
 as defined in
-L<RFC 3164|https://tools.ietf.org/html/rfc3164#section-4.1.1>.
+L<RFC 3164|https://datatracker.ietf.org/doc/html/rfc3164#section-4.1.1>.
 Possible values are the same as for the second parameter (level) of the
 L<ngx_core_module> directive.
 Default is “C<info>”.

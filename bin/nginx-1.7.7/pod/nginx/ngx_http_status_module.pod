@@ -16,20 +16,12 @@ access to various status information.
 
 B<NOTE>
 
-This module was superseded by the
+This module was available as part of our
+commercial subscription
+until 1.13.10.
+It was superseded by the
 L<ngx_http_api_module|ngx_http_api_module> module
-in 1.13.0.
-
-
-
-
-
-
-
-B<NOTE>
-
-This module is available as part of our
-commercial subscription.
+in 1.13.3.
 
 
 
@@ -187,7 +179,7 @@ By default, status information is output in the JSON format.
 
 Alternatively, data may be output as JSONP.
 The I<C<callback>> parameter specifies the name of a callback function.
-The value can contain variables.
+Parameter value can contain variables.
 If parameter is omitted, or the computed value is an empty string,
 then “C<ngx_status_jsonp_callback>” is used.
 

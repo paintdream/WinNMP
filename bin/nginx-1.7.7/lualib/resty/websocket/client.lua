@@ -2,7 +2,7 @@
 
 
 -- FIXME: this library is very rough and is currently just for testing
---        the websocket server.
+--        the websocket client.
 
 
 local wbproto = require "resty.websocket.protocol"
@@ -14,6 +14,7 @@ local _send_frame = wbproto.send_frame
 local new_tab = wbproto.new_tab
 local tcp = ngx.socket.tcp
 local re_match = ngx.re.match
+local re_find  = ngx.re.find
 local encode_base64 = ngx.encode_base64
 local concat = table.concat
 local char = string.char
@@ -26,6 +27,7 @@ local type = type
 local debug = ngx.config.debug
 local ngx_log = ngx.log
 local ngx_DEBUG = ngx.DEBUG
+local assert = assert
 local ssl_support = true
 
 if not ngx.config
@@ -36,7 +38,7 @@ then
 end
 
 local _M = new_tab(0, 13)
-_M._VERSION = '0.07'
+_M._VERSION = '0.12'
 
 
 local mt = { __index = _M }
@@ -49,8 +51,12 @@ function _M.new(self, opts)
     end
 
     local max_payload_len, send_unmasked, timeout
+    local max_recv_len, max_send_len
     if opts then
         max_payload_len = opts.max_payload_len
+        max_recv_len = opts.max_recv_len
+        max_send_len = opts.max_send_len
+
         send_unmasked = opts.send_unmasked
         timeout = opts.timeout
 
@@ -59,9 +65,14 @@ function _M.new(self, opts)
         end
     end
 
+    max_payload_len = max_payload_len or 65535
+    max_recv_len = max_recv_len or max_payload_len
+    max_send_len = max_send_len or max_payload_len
+
     return setmetatable({
         sock = sock,
-        max_payload_len = max_payload_len or 65535,
+        max_recv_len = max_recv_len,
+        max_send_len = max_send_len,
         send_unmasked = send_unmasked,
     }, mt)
 end
@@ -73,7 +84,16 @@ function _M.connect(self, uri, opts)
         return nil, "not initialized"
     end
 
-    local m, err = re_match(uri, [[^(wss?)://([^:/]+)(?::(\d+))?(.*)]], "jo")
+    local is_unix = false
+
+    local m, err
+    if re_find(uri, "unix:") then
+        is_unix = true
+        m, err = re_match(uri, [[^(wss?)://(unix:[^:]+):()(.*)]], "jo")
+    else
+        m, err = re_match(uri, [[^(wss?)://([^:/]+)(?::(\d+))?(.*)]], "jo")
+    end
+
     if not m then
         if err then
             return nil, "failed to match the uri: " .. err
@@ -83,22 +103,31 @@ function _M.connect(self, uri, opts)
     end
 
     local scheme = m[1]
-    local host = m[2]
+    local addr = m[2]
     local port = m[3]
     local path = m[4]
 
     -- ngx.say("host: ", host)
     -- ngx.say("port: ", port)
 
+    local ssl = scheme == "wss"
+    if ssl and not ssl_support then
+        return nil, "ngx_lua 0.9.11+ required for SSL sockets"
+    end
+
     if not port then
-        port = 80
+        port = ssl and 443 or 80
     end
 
     if path == "" then
         path = "/"
     end
 
-    local ssl_verify, proto_header, origin_header, sock_opts = false
+    local ssl_verify, server_name, headers, proto_header, origin_header
+    local sock_opts = {}
+    local client_cert, client_priv_key
+    local header_host
+    local key
 
     if opts then
         local protos = opts.protocols
@@ -117,67 +146,119 @@ function _M.connect(self, uri, opts)
             origin_header = "\r\nOrigin: " .. origin
         end
 
-        local pool = opts.pool
-        if pool then
-            sock_opts = { pool = pool }
+        if opts.pool then
+            sock_opts.pool = opts.pool
+        end
+        --pool_size specify the size of the connection pool. If omitted and no backlog option was provided, no pool will be created.
+        if opts.pool_size then
+            sock_opts.pool_size = opts.pool_size
+        end
+        if opts.backlog then
+            sock_opts.backlog = opts.backlog
         end
 
-        if opts.ssl_verify then
-            if not ssl_support then
-                return nil, "ngx_lua 0.9.11+ required for SSL sockets"
+
+        client_cert = opts.client_cert
+        client_priv_key = opts.client_priv_key
+
+        if client_cert then
+            assert(client_priv_key,
+                   "client_priv_key must be provided with client_cert")
+        end
+
+        ssl_verify = opts.ssl_verify
+
+        server_name = opts.server_name
+        if server_name ~= nil and type(server_name) ~= "string" then
+            return nil, "SSL server_name must be a string"
+        end
+
+        if opts.headers then
+            headers = opts.headers
+            if type(headers) ~= "table" then
+                return nil, "custom headers must be a table"
             end
-            ssl_verify = true
+        end
+
+        header_host = opts.host
+        if header_host ~= nil and type(header_host) ~= "string" then
+            return nil, "custom host header must be a string"
+        end
+
+        key = opts.key
+        if key ~= nil and type(key) ~= "string" then
+            return nil, "custom Sec-WebSocket-Key must be a string"
         end
     end
 
     local ok, err
-    if sock_opts then
-        ok, err = sock:connect(host, port, sock_opts)
+    if is_unix then
+        ok, err = sock:connect(addr, sock_opts)
     else
-        ok, err = sock:connect(host, port)
+        ok, err = sock:connect(addr, port, sock_opts)
     end
     if not ok then
         return nil, "failed to connect: " .. err
     end
 
-    if scheme == "wss" then
-        if not ssl_support then
-            return nil, "ngx_lua 0.9.11+ required for SSL sockets"
+    -- check for connections from pool:
+    local reused_count, err = sock:getreusedtimes()
+    if not reused_count then
+        return nil, "failed to get reused times: " .. tostring(err)
+    end
+
+    if reused_count > 0 then
+        -- being a reused connection (must have done handshake)
+        return 1, nil, "connection reused"
+    end
+
+    if ssl then
+        if client_cert then
+            ok, err = sock:setclientcert(client_cert, client_priv_key)
+            if not ok then
+                return nil, "failed to set TLS client certificate: " .. err
+            end
         end
-        ok, err = sock:sslhandshake(false, host, ssl_verify)
+
+        server_name = server_name or header_host or addr
+
+        ok, err = sock:sslhandshake(false, server_name, ssl_verify)
         if not ok then
             return nil, "ssl handshake failed: " .. err
         end
     end
 
-    -- check for connections from pool:
-
-    local count, err = sock:getreusedtimes()
-    if not count then
-        return nil, "failed to get reused times: " .. err
-    end
-    if count > 0 then
-        -- being a reused connection (must have done handshake)
-        return 1
+    local custom_headers
+    if headers then
+        custom_headers = concat(headers, "\r\n")
+        custom_headers = "\r\n" .. custom_headers
     end
 
     -- do the websocket handshake:
 
-    local bytes = char(rand(256) - 1, rand(256) - 1, rand(256) - 1,
-                       rand(256) - 1, rand(256) - 1, rand(256) - 1,
-                       rand(256) - 1, rand(256) - 1, rand(256) - 1,
-                       rand(256) - 1, rand(256) - 1, rand(256) - 1,
-                       rand(256) - 1, rand(256) - 1, rand(256) - 1,
-                       rand(256) - 1)
+    if not key then
+        local bytes = char(rand(256) - 1, rand(256) - 1, rand(256) - 1,
+                           rand(256) - 1, rand(256) - 1, rand(256) - 1,
+                           rand(256) - 1, rand(256) - 1, rand(256) - 1,
+                           rand(256) - 1, rand(256) - 1, rand(256) - 1,
+                           rand(256) - 1, rand(256) - 1, rand(256) - 1,
+                           rand(256) - 1)
 
-    local key = encode_base64(bytes)
+        key = encode_base64(bytes)
+    end
+
+    local host_header = header_host 
+                        or (is_unix and "unix_sock" or addr .. ":" .. port)
+
     local req = "GET " .. path .. " HTTP/1.1\r\nUpgrade: websocket\r\nHost: "
-                .. host .. ":" .. port
+                .. host_header
                 .. "\r\nSec-WebSocket-Key: " .. key
                 .. (proto_header or "")
                 .. "\r\nSec-WebSocket-Version: 13"
                 .. (origin_header or "")
-                .. "\r\nConnection: Upgrade\r\n\r\n"
+                .. "\r\nConnection: Upgrade"
+                .. (custom_headers or "")
+                .. "\r\n\r\n"
 
     local bytes, err = sock:send(req)
     if not bytes then
@@ -200,7 +281,7 @@ function _M.connect(self, uri, opts)
         return nil, "bad HTTP response status line: " .. header
     end
 
-    return 1
+    return 1, nil, header
 end
 
 
@@ -224,7 +305,7 @@ function _M.recv_frame(self)
         return nil, nil, "not initialized yet"
     end
 
-    local data, typ, err =  _recv_frame(sock, self.max_payload_len, false)
+    local data, typ, err =  _recv_frame(sock, self.max_recv_len, false)
     if not data and not str_find(err, ": timeout", 1, true) then
         self.fatal = true
     end
@@ -247,7 +328,7 @@ local function send_frame(self, fin, opcode, payload)
     end
 
     local bytes, err = _send_frame(sock, fin, opcode, payload,
-                                   self.max_payload_len,
+                                   self.max_send_len,
                                    not self.send_unmasked)
     if not bytes then
         self.fatal = true

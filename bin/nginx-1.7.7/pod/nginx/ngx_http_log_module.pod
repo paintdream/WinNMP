@@ -82,7 +82,7 @@ B<context:> I<limit_except>
 
 
 Sets the path, format, and configuration for a buffered log write.
-Several logs can be specified on the same level.
+Several logs can be specified on the same configuration level.
 Logging to L<syslog|syslog>
 can be configured by specifying
 the “C<syslog:>” prefix in the first parameter.
@@ -219,7 +219,7 @@ is checked, and if it does not exist the log is not
 created.
 It is thus a good idea to specify both
 L<ngx_http_core_module>
-and C<access_log> on the same level:
+and C<access_log> on the same configuration level:
 
     
     server {
@@ -266,7 +266,7 @@ will not be logged:
 
 B<syntax:> log_format I<
     I<C<name>>
-    [C<escape>=C<default>E<verbar>C<json>]
+    [C<escape>=C<default>E<verbar>C<json>E<verbar>C<none>]
     I<C<string>> ...>
 
 
@@ -288,6 +288,38 @@ Specifies log format.
 The C<escape> parameter (1.11.8) allows setting
 C<json> or C<default> characters escaping
 in variables, by default, C<default> escaping is used.
+The C<none> value (1.13.10) disables escaping.
+
+
+
+
+
+For C<default> escaping,
+characters “C<">”, “C<\>”,
+and other characters with values less than 32 (0.7.0) or above 126 (1.1.6)
+are escaped as “C<\xXX>”.
+If the variable value is not found,
+a hyphen (“C<->”) will be logged.
+
+
+
+
+
+For C<json> escaping,
+all characters not allowed
+in JSON L<strings|https://datatracker.ietf.org/doc/html/rfc8259#section-7>
+will be escaped:
+characters “C<">” and
+“C<\>” are escaped as
+“C<\">” and “C<\\>”,
+characters with values less than 32 are escaped as
+“C<\n>”,
+“C<\r>”,
+“C<\t>”,
+“C<\b>”,
+“C<\f>”, or
+“C<\u00XX>”.
+
 
 
 
